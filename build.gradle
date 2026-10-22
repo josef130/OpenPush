@@ -1,5 +1,33 @@
 plugins {
+    id 'maven-publish'
     id 'com.android.library' version '8.10.1' apply false
     id 'com.android.application' version '8.10.1' apply false
     id 'com.google.gms.google-services' version '4.5.0' apply false
+}
+
+// Unreleased local verification version. A Git tag/release is never changed by this build.
+def publicationVersion = providers.gradleProperty('openpushPublicationVersion').getOrElse('0.1.0-local')
+group = 'com.github.josef130'
+version = publicationVersion
+subprojects {
+    group = 'com.github.josef130.OpenPush'
+    version = publicationVersion
+    plugins.withId('maven-publish') {
+        publishing.repositories.maven { name = 'Verification'; url = rootProject.layout.buildDirectory.dir('verification-maven') }
+    }
+}
+publishing {
+    publications {
+        openpush(MavenPublication) {
+            artifactId = 'OpenPush'
+            pom.withXml {
+                def dep = asNode().appendNode('dependencies').appendNode('dependency')
+                dep.appendNode('groupId', 'com.github.josef130.OpenPush')
+                dep.appendNode('artifactId', 'sdk')
+                dep.appendNode('version', publicationVersion)
+                dep.appendNode('scope', 'compile')
+            }
+        }
+    }
+    repositories.maven { name = 'Verification'; url = layout.buildDirectory.dir('verification-maven') }
 }

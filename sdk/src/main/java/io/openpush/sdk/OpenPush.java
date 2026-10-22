@@ -21,9 +21,31 @@ import io.openpush.core.RoutingEngine;
 import java.util.HashMap;
 import java.util.Map;
 
-/** Explicit host integration; no implicit service registration or URL launching. */
+/** Java SDK with explicit builder integration or resource-configured automatic setup. */
 public final class OpenPush {
     private static volatile OpenPush notificationInstance;
+    boolean automatic;
+    /** Declarative setup; safe to call again from MainActivity after process recreation. */
+    public static void init(Activity activity) {
+        OpenPush push=AutoSetup.get(activity);
+        if(push==null)throw new IllegalStateException("OpenPush configuration missing; see Android SDK setup");
+        AutoSetup.register(activity);
+        push.handleIntent(activity,activity.getIntent());
+        if(Build.VERSION.SDK_INT>=33 && activity.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED) {
+            android.content.SharedPreferences prefs=activity.getSharedPreferences("openpush.permission.v1",Context.MODE_PRIVATE);
+            if(!prefs.getBoolean("requested",false)){
+                prefs.edit().putBoolean("requested",true).apply();
+                activity.requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},0x4f50);
+            }
+        }
+    }
+    /** Existing host FCM services delegate here instead of registering another receiver. */
+    public static boolean receive(Context context,RemoteMessage message){
+        OpenPush push=AutoSetup.get(context);
+        if(push==null)push=notificationInstance;
+        return push!=null && push.showNotification(message);
+    }
+    public static void refreshRegistration(Context context){AutoSetup.register(context);}
     public static final String CHANNEL_ID = "openpush";
     private static final Object CLICK_LOCK = new Object();
     private final Context context;
@@ -141,7 +163,7 @@ public final class OpenPush {
                 receipt(data,"notification_disabled"); emit(Event.CHANNEL_DISABLED); return true;
             }
         }
-        Intent intent = new Intent(context, ("url".equals(route.type) || "deeplink".equals(route.type)) ? OpenPushClickActivity.class : activity)
+        Intent intent = new Intent(context, (automatic || "url".equals(route.type) || "deeplink".equals(route.type)) ? OpenPushClickActivity.class : activity)
                 .setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 .setData(new Uri.Builder().scheme("openpush").authority("click").appendPath(route.id).build());
         for (Map.Entry<String, String> entry : data.entrySet()) {
@@ -170,6 +192,7 @@ public final class OpenPush {
     }
 
     static void dispatchNotificationClick(Activity bridge, Intent source) {
+        AutoSetup.get(bridge);
         OpenPush push = notificationInstance;
         if(push == null) {
             Intent launcher = bridge.getPackageManager().getLaunchIntentForPackage(bridge.getPackageName());
@@ -180,9 +203,9 @@ public final class OpenPush {
             return;
         }
         String type = source == null ? null : source.getStringExtra("op_type");
-        if("url".equals(type) || "deeplink".equals(type)) {
+        if("url".equals(type) || "deeplink".equals(type) || push.automatic) {
             ClickResult result = push.handleIntent(bridge,source);
-            if(result == ClickResult.OPENED || result == ClickResult.DUPLICATE) return;
+            if(result == ClickResult.DUPLICATE || (result == ClickResult.OPENED && !"app".equals(type))) return;
         }
         Intent launcher = new Intent(push.context,push.activity)
                 .setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);

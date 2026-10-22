@@ -80,7 +80,7 @@ public class PracticalIntegrationTest {
         assertEquals(targets[0], google.getDataString());
         assertNull(google.getComponent());
         assertNull(google.getPackage());
-        assertTrue(google.getSelector().hasCategory(Intent.CATEGORY_APP_BROWSER));
+        assertNull(google.getSelector()); // Ordinary web uses Android default resolution, no forced browser selector.
         controller.newIntent(deliverTap("approved-web-1"));
         Intent console = Shadows.shadowOf(activity).getNextStartedActivity();
         assertNotNull(console);

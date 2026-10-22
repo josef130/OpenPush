@@ -4,6 +4,9 @@ plugins {
 // Explicit local QA mode; no fabricated Firebase configuration or transport success claims.
 def localOnly = providers.gradleProperty('openpushLocalOnly').isPresent()
         || providers.gradleProperty('openpushCompileOnly').isPresent()
+def automaticTest = new Properties()
+def automaticTestFile = rootProject.file('automatic-test.properties')
+if (automaticTestFile.exists()) automaticTestFile.withInputStream { automaticTest.load(it) }
 if (!localOnly) {
     apply plugin: 'com.google.gms.google-services'
 }
@@ -33,6 +36,22 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
     testOptions { unitTests.includeAndroidResources = true }
+    flavorDimensions 'integration'
+    productFlavors {
+        manual { dimension 'integration' }
+        automatic {
+            dimension 'integration'
+            resValue 'string', 'openpush_server_url', providers.gradleProperty('openpushServerUrl').getOrElse(automaticTest.getProperty('serverUrl',''))
+            resValue 'string', 'openpush_app_id', providers.gradleProperty('openpushAppId').getOrElse(automaticTest.getProperty('appId',''))
+            resValue 'string', 'openpush_project_id', providers.gradleProperty('openpushProjectId').getOrElse(automaticTest.getProperty('projectId',''))
+            resValue 'string', 'openpush_client_key', providers.gradleProperty('openpushClientKey').getOrElse(automaticTest.getProperty('clientKey',''))
+            resValue 'string', 'openpush_web_hosts', 'www.google.com,google.com,example.com,play.google.com'
+        }
+    }
+    sourceSets {
+        test.java.setSrcDirs([])
+        testManual.java.srcDir 'src/test/java'
+    }
 }
 dependencies {
     implementation project(':sdk')

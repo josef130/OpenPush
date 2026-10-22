@@ -12,4 +12,14 @@ Build a configured sample after placing your own client JSON:
 
 For local dashboard telemetry only, pass `-PopenpushTelemetryEndpoint=http://127.0.0.1:4310/api/events` and run `scripts\connect-android-telemetry.cmd` after USB reconnection. Production requires your own reachable HTTPS endpoint. Dashboard code is not required to build this SDK.
 
-No Maven package or Git repository has been created by this reorganization. Both `sdk` and `core` are required; the AAR alone does not embed core or Firebase dependencies.
+The original manual sample now builds as `:sample:assembleManualDebug` and launches
+MainActivity. Automatic integration builds as `:sample:assembleAutomaticDebug` and
+launches SimpleActivity without a custom Application or host messaging service.
+Use ignored automatic-test.properties with serverUrl, appId, projectId, clientKey
+for local QA (or the corresponding openpushServerUrl/AppId/ProjectId/ClientKey
+Gradle properties). Never add server credentials to this file.
+
+Local Maven checks use build/verification-maven and 0.1.0-local. No Git repository
+or remote release has been created/updated by this work. The raw AAR alone does
+not embed core or Firebase; the configured Maven publications include their metadata.
+See docs/AUTOMATIC-SETUP.md.

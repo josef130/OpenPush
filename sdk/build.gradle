@@ -1,7 +1,8 @@
-plugins { id 'com.android.library' }
+plugins { id 'com.android.library'; id 'maven-publish' }
 android {
     namespace 'io.openpush.sdk'
     compileSdk 35
+    publishing { singleVariant('release') { withSourcesJar() } }
     defaultConfig {
         minSdk 24
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
@@ -12,10 +13,11 @@ android {
     }
     testOptions { unitTests.includeAndroidResources = true }
 }
+afterEvaluate { publishing { publications { sdk(MavenPublication) { from components.release } } } }
 dependencies {
     api project(':core')
     // Host owns Firebase runtime versions. Do not export a BoM or upgrade its libraries.
-    compileOnly 'com.google.firebase:firebase-messaging:25.0.1'
+    api 'com.google.firebase:firebase-messaging:25.0.1'
     testImplementation 'com.google.firebase:firebase-messaging:25.0.1'
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.robolectric:robolectric:4.14.1'

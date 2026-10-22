@@ -2,6 +2,12 @@
 
 ## Android SDK
 
+Automatic integration is implemented locally (not added to the published 0.1.0 tag).
+See [three-step setup](docs/AUTOMATIC-SETUP.md): configure Firebase, add the generated
+`openpush.xml` and notification icon, then call `OpenPush.init(this)` in your Activity.
+New apps need no custom Application or FirebaseMessagingService. Existing services
+must delegate explicitly; the manual builder API below remains supported.
+
 Java Android library for Firebase Console notification clicks, central routing rules,
 web URLs, Google Play links/package names, declared deep links and custom actions. The Android modules contain no sending keys or service-account credentials. MIT licensed. API 24+, compileSdk 35, Java 8 source.
 This checkout builds with JDK 17, Gradle 8.14.3 and AGP 8.10.1.
@@ -23,12 +29,12 @@ use the SAME Android Gradle Plugin version as that host's application plugin; do
 this checkout's root build.gradle over an existing project. These versions describe this
 checkout's verified build, not a mandatory upgrade of another app's toolchain.
 
-The SDK uses **compileOnly Messaging 25.0.1**, a released compile/test baseline. It exports
-NO Firebase BoM or Firebase runtime dependency. If your app already declares Messaging
+The SDK now exports **Firebase Messaging 25.0.1** as a runtime API dependency, required
+by its merged fallback service. It exports no Firebase BoM. If your app declares Messaging
 through a BoM, **keep that existing declaration**: do not add a second version or replace
 its BoM. This example is not an instruction to upgrade/downgrade existing apps. Other
 versions require host-specific validation; universal compatibility is not claimed.
-No resolution strategy or Firebase runtime version constraint is injected by OpenPush.
+Inspect the resolved Firebase graph in each host; Gradle may select a higher compatible version.
 The independent sample explicitly uses 25.0.1 instead of the previous prototype's
 BoM-selected 26.0.0, to exercise the lower compile baseline without changing other apps.
 See [Firebase releases](https://firebase.google.com/support/release-notes/android#messaging_v25-0-1).

@@ -2,6 +2,21 @@ package io.openpush.sdk;
 import android.app.Activity;import android.content.Context;import android.content.Intent;import android.app.NotificationManager;import android.service.notification.StatusBarNotification;import com.google.firebase.messaging.RemoteMessage;import org.junit.Test;import org.junit.runner.RunWith;import org.robolectric.Robolectric;import org.robolectric.RobolectricTestRunner;import org.robolectric.RuntimeEnvironment;import org.robolectric.Shadows;import org.robolectric.annotation.Config;import java.util.HashMap;import java.util.Map;import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class) @Config(sdk=28,manifest=Config.NONE)
 public class NotificationClickActivityTest {
+ @Test public void automaticDefaultNotificationNeedsNoHostClickForwardingAndOpensOnlyOnce()throws Exception{
+  android.app.Application app=RuntimeEnvironment.getApplication();
+  app.getSharedPreferences("openpush.clicks.v1",0).edit().clear().commit();
+  OpenPush push=OpenPush.builder(app,Activity.class,android.R.drawable.ic_dialog_info).build();push.automatic=true;
+  assertTrue(push.showNotification(new RemoteMessage.Builder("fixture").addData("op_v","1").addData("op_id","auto-default")
+    .addData("op_type","app").addData("op_target","main").addData("op_title","Default").build()));
+  NotificationManager manager=(NotificationManager)app.getSystemService(Context.NOTIFICATION_SERVICE);
+  manager.getActiveNotifications()[0].getNotification().contentIntent.send();
+  Intent pending=Shadows.shadowOf(app).getNextStartedActivity();
+  assertEquals(OpenPushClickActivity.class.getName(),pending.getComponent().getClassName());
+  OpenPushClickActivity bridge=Robolectric.buildActivity(OpenPushClickActivity.class,pending).create().get();
+  assertEquals(Activity.class.getName(),Shadows.shadowOf(bridge).getNextStartedActivity().getComponent().getClassName());
+  OpenPushClickActivity repeated=Robolectric.buildActivity(OpenPushClickActivity.class,new Intent(pending)).create().get();
+  assertNull(Shadows.shadowOf(repeated).getNextStartedActivity());
+ }
  @Test public void fullStoreUrlUsesDirectStoreIntentAndRepeatedTapDoesNotLaunchAgain(){
   Context c=RuntimeEnvironment.getApplication();
   c.getSharedPreferences("openpush.clicks.v1",0).edit().clear().commit();
