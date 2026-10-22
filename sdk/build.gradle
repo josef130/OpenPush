@@ -1,0 +1,25 @@
+plugins { id 'com.android.library' }
+android {
+    namespace 'io.openpush.sdk'
+    compileSdk 35
+    defaultConfig {
+        minSdk 24
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    testOptions { unitTests.includeAndroidResources = true }
+}
+dependencies {
+    api project(':core')
+    // Host owns Firebase runtime versions. Do not export a BoM or upgrade its libraries.
+    compileOnly 'com.google.firebase:firebase-messaging:25.0.1'
+    testImplementation 'com.google.firebase:firebase-messaging:25.0.1'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.14.1'
+    androidTestImplementation 'com.google.firebase:firebase-messaging:25.0.1'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+}

@@ -1,0 +1,45 @@
+plugins {
+    id 'com.android.application'
+}
+// Explicit local QA mode; no fabricated Firebase configuration or transport success claims.
+def localOnly = providers.gradleProperty('openpushLocalOnly').isPresent()
+        || providers.gradleProperty('openpushCompileOnly').isPresent()
+if (!localOnly) {
+    apply plugin: 'com.google.gms.google-services'
+}
+android {
+    // Run the library's device contracts inside this current-target sample APK too.
+    // Some OEM verifiers refuse the standalone library test APK (default target 24).
+    sourceSets.androidTest.java.srcDir rootProject.file('sdk/src/androidTest/java')
+    buildFeatures { buildConfig = true }
+    namespace 'io.openpush.sample'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'io.openpush.sample'
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName '0.1.0'
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+        buildConfigField 'boolean', 'LOCAL_ONLY_BUILD', localOnly.toString()
+        buildConfigField 'String', 'TELEMETRY_ENDPOINT', '"' + providers.gradleProperty('openpushTelemetryEndpoint').getOrElse('').replace('\\','\\\\').replace('"','\\"') + '"'
+    }
+    buildTypes {
+        debug { manifestPlaceholders = [openpushDebugCleartext: "true"] }
+        release { manifestPlaceholders = [openpushDebugCleartext: "false"] }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    testOptions { unitTests.includeAndroidResources = true }
+}
+dependencies {
+    implementation project(':sdk')
+    implementation 'com.google.firebase:firebase-messaging:25.0.1'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.14.1'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.3.0'
+}
