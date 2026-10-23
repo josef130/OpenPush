@@ -1,0 +1,11 @@
+plugins { id 'groovy-gradle-plugin' }
+group = 'io.openpush'
+version = '0.1.0-local'
+gradlePlugin {
+    plugins {
+        openpush {
+            id = 'io.openpush.android'
+            implementationClass = 'io.openpush.gradle.OpenPushPlugin'
+        }
+    }
+}

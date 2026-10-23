@@ -90,11 +90,7 @@ the same ID may dispatch again. Single-process hosts only. Call on main thread.
 
 ## Dependencies and diagnostics
 
-SDK Firebase Messaging is compileOnly 25.0.1. No Firebase BoM/runtime version is exported;
-each host owns its Messaging declaration and validates its version. This avoids the prototype's
-transitive BoM 35.0.1 upgrading unrelated host Firebase libraries. The sample and test fixtures
-explicitly select Messaging 25.0.1. Existing host versions must not be changed merely to match
-the sample. core is a separate Java module; source integration includes core and sdk. A raw
+SDK exports Firebase Messaging 23.4.1 as a runtime dependency compatible with the API 21 baseline. No Firebase BoM is exported. Existing hosts may exclude this transitive dependency to retain their explicitly validated version (wasafat retains 21.1.0). The sample independently uses 25.0.1 and a higher minSdk. core is a separate Java module; source integration includes core and sdk. A raw
 SDK AAR requires its core/Firebase dependencies and is not a fat AAR.
 
 Diagnostics deliver fixed enum events only, without payloads, IDs, tokens, URLs or exception

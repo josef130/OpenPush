@@ -9,10 +9,11 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.function.BooleanSupplier;
+
 
 public final class ReceiptJobService extends JobService {
     private volatile int generation;
+    interface BooleanSupplier { boolean getAsBoolean(); }
     interface Uploader { int upload(JSONObject body) throws Exception; }
 
     // Refresh the queue after every upload: display/click/session events can arrive

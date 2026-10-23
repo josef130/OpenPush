@@ -5,11 +5,12 @@
 Automatic integration is implemented locally (not added to the published 0.1.0 tag).
 See [three-step setup](docs/AUTOMATIC-SETUP.md): configure Firebase, add the generated
 `openpush.xml` and notification icon, then call `OpenPush.init(this)` in your Activity.
+The optional local Gradle plugin reads app/openpush.xml; see [plugin integration](gradle-plugin/README.md).
 New apps need no custom Application or FirebaseMessagingService. Existing services
 must delegate explicitly; the manual builder API below remains supported.
 
 Java Android library for Firebase Console notification clicks, central routing rules,
-web URLs, Google Play links/package names, declared deep links and custom actions. The Android modules contain no sending keys or service-account credentials. MIT licensed. API 24+, compileSdk 35, Java 8 source.
+web URLs, Google Play links/package names, declared deep links and custom actions. The Android modules contain no sending keys or service-account credentials. MIT licensed. API 21+, compileSdk 35, Java 8 source.
 This checkout builds with JDK 17, Gradle 8.14.3 and AGP 8.10.1.
 
 ## Add modules and configure Firebase
@@ -20,7 +21,7 @@ Add these dependencies to your app:
 ```groovy
 dependencies {
     implementation project(':sdk')
-    implementation 'com.google.firebase:firebase-messaging:25.0.1'
+    implementation 'com.google.firebase:firebase-messaging:23.4.1'
 }
 ```
 
@@ -29,7 +30,7 @@ use the SAME Android Gradle Plugin version as that host's application plugin; do
 this checkout's root build.gradle over an existing project. These versions describe this
 checkout's verified build, not a mandatory upgrade of another app's toolchain.
 
-The SDK now exports **Firebase Messaging 25.0.1** as a runtime API dependency, required
+The SDK now exports **Firebase Messaging 23.4.1** as a runtime API dependency, required
 by its merged fallback service. It exports no Firebase BoM. If your app declares Messaging
 through a BoM, **keep that existing declaration**: do not add a second version or replace
 its BoM. This example is not an instruction to upgrade/downgrade existing apps. Other

@@ -107,7 +107,7 @@ public final class Router {
             Set<String> approvedHttp = new HashSet<>(httpHosts);
             LaunchDiagnostics launches = launchDiagnostics;
             List<DeepLinkRule> deepRules = new ArrayList<>(links);
-            all.putIfAbsent("app", new OpenPush.RouteHandler() {
+            if (!all.containsKey("app")) all.put("app", new OpenPush.RouteHandler() {
                 public boolean accepts(Route route) { return "main".equals(route.target); }
                 public void open(Activity host, Route route) { /* Host launcher is already visible. */ }
             });
@@ -238,7 +238,7 @@ public final class Router {
                 android.content.pm.ActivityInfo info = match.activityInfo;
                 if (info == null || !"com.android.vending".equals(info.packageName) || info.name == null
                         || !info.exported || !info.enabled || info.applicationInfo == null || !info.applicationInfo.enabled
-                        || (info.permission != null && context.checkSelfPermission(info.permission) != PackageManager.PERMISSION_GRANTED)) continue;
+                        || (info.permission != null && context.checkCallingOrSelfPermission(info.permission) != PackageManager.PERMISSION_GRANTED)) continue;
                 ComponentName candidate = new ComponentName(info.packageName, info.name);
                 if (selected != null && !selected.equals(candidate)) return null;
                 selected = candidate;

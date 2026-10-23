@@ -31,7 +31,7 @@ final class MobileActivityTracker implements Application.ActivityLifecycleCallba
         if(activity instanceof OpenPushClickActivity) return;
         long occurredAt=System.currentTimeMillis();
         NotificationManager manager=(NotificationManager)app.getSystemService(Context.NOTIFICATION_SERVICE);
-        boolean enabled=manager!=null && manager.areNotificationsEnabled()
+        boolean enabled=manager!=null && androidx.core.app.NotificationManagerCompat.from(app).areNotificationsEnabled()
             && (Build.VERSION.SDK_INT<33 || app.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED);
         if(Build.VERSION.SDK_INT>=26 && manager!=null) {
             NotificationChannel channel=manager.getNotificationChannel(OpenPush.CHANNEL_ID);

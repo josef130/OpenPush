@@ -21,10 +21,10 @@ In app/build.gradle, apply `id 'com.google.gms.google-services'` alongside the
 existing Android application plugin. Its version belongs in the host's root plugin
 configuration; preserve an existing compatible version. This checkout uses 4.5.0.
 
-The root POM pulls sdk, core and Firebase Messaging 25.0.1. Enable
+The root POM pulls sdk, core and Firebase Messaging 23.4.1 (Android 5/6 compatible baseline; a host may retain its explicitly tested Firebase version). Enable
 `android.useAndroidX=true` in gradle.properties. Keep a compatible existing Firebase
 BoM and verify resolution. Configure the Google Services plugin and put your app's
-Firebase client google-services.json in app/. API 24+ and Google Play services required.
+Firebase client google-services.json in app/. API 21+ and Google Play services required. Optional image upgrades require API 23+. See ../gradle-plugin/README.md for the new Gradle configuration plugin.
 
 ## 2. App configuration
 
@@ -73,3 +73,8 @@ Test dashboard → phone → displayed receipt before tap → clicked receipt af
 Plain Firebase Console Notification + Data has different background system behavior;
 existing hosts may still need onCreate/onNewIntent forwarding for those messages.
 Force stop and OEM restrictions cannot be bypassed or treated as guaranteed delivery.
+
+If another dependency removes RECEIVE_BOOT_COMPLETED from the merged manifest,
+registration and receipts use non-persisted network jobs instead of crashing. Receipt
+events remain in private durable storage and can resume on a later app/FCM start;
+without boot permission, the SDK does not promise job restoration immediately after reboot.

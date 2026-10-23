@@ -152,7 +152,7 @@ public final class OpenPush {
         if (route == null) { receipt(data,"display_failed"); emit(Event.INVALID_MESSAGE); return true; }
         if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) { receipt(data,"notification_disabled"); emit(Event.PERMISSION_DENIED); return true; }
-        if (!manager().areNotificationsEnabled()) { receipt(data,"notification_disabled"); emit(Event.NOTIFICATIONS_DISABLED); return true; }
+        if (!androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()) { receipt(data,"notification_disabled"); emit(Event.NOTIFICATIONS_DISABLED); return true; }
         if (Build.VERSION.SDK_INT >= 26 && manager().getNotificationChannel(CHANNEL_ID) == null) {
             createChannel("OpenPush");
         }

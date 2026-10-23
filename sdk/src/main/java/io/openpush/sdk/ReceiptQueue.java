@@ -74,10 +74,10 @@ final class ReceiptQueue {
         for(String key:context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).getAll().keySet())if(key.startsWith("event:")){hasEvents=true;break;}
         if(!hasEvents)return;
         JobScheduler scheduler=(JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-        if(scheduler==null || scheduler.getPendingJob(JOB_ID)!=null)return;
-        try { int result=scheduler.schedule(new JobInfo.Builder(JOB_ID,new ComponentName(context,ReceiptJobService.class))
-                .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY).setPersisted(true)
-                .setBackoffCriteria(30000,JobInfo.BACKOFF_POLICY_EXPONENTIAL).build());
+        if(scheduler==null || BackgroundJobs.pending(scheduler,JOB_ID)!=null)return;
+        try { int result=BackgroundJobs.submit(context,scheduler,new JobInfo.Builder(JOB_ID,new ComponentName(context,ReceiptJobService.class))
+                .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+                .setBackoffCriteria(30000,JobInfo.BACKOFF_POLICY_EXPONENTIAL));
             if(result!=JobScheduler.RESULT_SUCCESS) uploadStatus(context,"schedule_rejected");
         } catch (RuntimeException unavailable) { uploadStatus(context,"schedule_unavailable"); /* Keep the durable queue for a later app start. */ }
     }

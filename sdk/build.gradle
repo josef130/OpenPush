@@ -4,7 +4,7 @@ android {
     compileSdk 35
     publishing { singleVariant('release') { withSourcesJar() } }
     defaultConfig {
-        minSdk 24
+        minSdk 21
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     compileOptions {
@@ -16,12 +16,13 @@ android {
 afterEvaluate { publishing { publications { sdk(MavenPublication) { from components.release } } } }
 dependencies {
     api project(':core')
+    implementation 'androidx.core:core:1.13.1'
     // Host owns Firebase runtime versions. Do not export a BoM or upgrade its libraries.
-    api 'com.google.firebase:firebase-messaging:25.0.1'
-    testImplementation 'com.google.firebase:firebase-messaging:25.0.1'
+    api 'com.google.firebase:firebase-messaging:23.4.1'
+    testImplementation 'com.google.firebase:firebase-messaging:23.4.1'
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.robolectric:robolectric:4.14.1'
-    androidTestImplementation 'com.google.firebase:firebase-messaging:25.0.1'
+    androidTestImplementation 'com.google.firebase:firebase-messaging:23.4.1'
     androidTestImplementation 'androidx.test:runner:1.6.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
 }

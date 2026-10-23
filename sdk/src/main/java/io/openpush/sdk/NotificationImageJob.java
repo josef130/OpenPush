@@ -23,7 +23,7 @@ public final class NotificationImageJob extends JobService {
     private final java.util.Set<JobParameters> cancelled = java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<JobParameters, Boolean>());
 
     static synchronized void schedule(Context context, String tag, String image) {
-        if (!safe(image)) return;
+        if (Build.VERSION.SDK_INT < 23 || !safe(image)) return;
         try {
             JobScheduler scheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
             NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -35,7 +35,7 @@ public final class NotificationImageJob extends JobService {
             extras.putLong("postedAt", posted.getPostTime());
             // Do not replace receipt jobs or another image when tags hash to the same value.
             int id = 0x49000000 | (tag.hashCode() & 0xfffff);
-            while (scheduler.getPendingJob(id) != null) id++;
+            while (BackgroundJobs.pending(scheduler,id) != null) id++;
             scheduler.schedule(new JobInfo.Builder(id, new ComponentName(context, NotificationImageJob.class))
                     .setExtras(extras).setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY).build());
         } catch (RuntimeException ignored) { /* The text notification remains available. */ }
@@ -51,12 +51,14 @@ public final class NotificationImageJob extends JobService {
     }
 
     private static StatusBarNotification find(NotificationManager manager, String tag) {
+        if (Build.VERSION.SDK_INT < 23) return null;
         for (StatusBarNotification n : manager.getActiveNotifications())
             if (n.getId() == 0 && tag.equals(n.getTag())) return n;
         return null;
     }
 
     static boolean upgrade(Context context, String tag, long postedAt, Bitmap image) {
+        if (Build.VERSION.SDK_INT < 23) return false;
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         StatusBarNotification active = find(manager, tag);
         // Never recreate a notification the user clicked/dismissed, or overwrite a replacement.
@@ -106,7 +108,7 @@ public final class NotificationImageJob extends JobService {
                     image = new URL(new URL(image), connection.getHeaderField("Location")).toString();
                     continue;
                 }
-                if (status != 200 || connection.getContentLengthLong() > 2 * 1024 * 1024) return null;
+                if (status != 200 || connection.getContentLength() > 2 * 1024 * 1024) return null;
                 ByteArrayOutputStream bytes = new ByteArrayOutputStream();
                 try (InputStream stream = connection.getInputStream()) {
                     byte[] buffer = new byte[8192]; int count;

@@ -25,9 +25,11 @@ public final class RegistrationJob extends JobService {
  static final int ID=0x4f505247;
  private volatile int generation;
  static void schedule(Context c){
-  JobScheduler scheduler=(JobScheduler)c.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-  if(scheduler.getPendingJob(ID)==null)scheduler.schedule(new JobInfo.Builder(ID,new ComponentName(c,RegistrationJob.class))
-    .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY).setBackoffCriteria(30000,JobInfo.BACKOFF_POLICY_EXPONENTIAL).setPersisted(true).build());
+  try{
+   JobScheduler scheduler=(JobScheduler)c.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+   if(scheduler!=null && BackgroundJobs.pending(scheduler,ID)==null)BackgroundJobs.submit(c,scheduler,new JobInfo.Builder(ID,new ComponentName(c,RegistrationJob.class))
+     .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY).setBackoffCriteria(30000,JobInfo.BACKOFF_POLICY_EXPONENTIAL));
+  }catch(RuntimeException unavailable){android.util.Log.w("OpenPushRegistration","SCHEDULING_DEFERRED");}
  }
  interface Transport{int post(JSONObject body)throws Exception;}
  static synchronized JSONObject body(Context c,String token)throws Exception{
@@ -45,7 +47,7 @@ public final class RegistrationJob extends JobService {
    if(!p.edit().putString("id",id).putString("secret",secret).commit())throw new java.io.IOException();
   }
   NotificationManager manager=(NotificationManager)c.getSystemService(Context.NOTIFICATION_SERVICE);
-  boolean enabled=manager.areNotificationsEnabled();
+  boolean enabled=androidx.core.app.NotificationManagerCompat.from(c).areNotificationsEnabled();
   if(Build.VERSION.SDK_INT>=26){NotificationChannel channel=manager.getNotificationChannel(OpenPush.CHANNEL_ID);enabled &= channel==null || channel.getImportance()!=NotificationManager.IMPORTANCE_NONE;}
   return new JSONObject().put("appId",AutoSetup.setting(c,"openpush_app_id")).put("projectId",AutoSetup.setting(c,"openpush_project_id"))
     .put("packageName",c.getPackageName()).put("clientKey",AutoSetup.setting(c,"openpush_client_key"))
