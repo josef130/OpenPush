@@ -1,9 +1,10 @@
 # OpenPush Gradle plugin — Maven / JitPack integration
 
-Publication is prepared but NOT uploaded. Existing public 0.1.0 does not gain this
-plugin automatically. NEW_RELEASE_TAG below is a placeholder for a NEW GitHub tag
-whose JitPack build has actually succeeded. Do not paste 0.1.0 or a guessed version.
-
+Verified on 2026-10-23: GitHub commit be41cc034b78ce2af5f0136766251c340b11db68
+was built successfully by JitPack. The examples below use its immutable short
+commit version be41cc034b for BOTH SDK and plugin. The older tag 0.1.0 does NOT
+contain these publications. Use a new verified tag later; do not replace 0.1.0.
+No local source directories, includeBuild or verification Maven are needed.
 ## 1. Project-level build.gradle: plugin classpath
 
 Merge these entries into the existing buildscript block; retain AGP and other plugins:
@@ -16,7 +17,7 @@ buildscript {
         maven { url 'https://jitpack.io' }
     }
     dependencies {
-        classpath 'com.github.josef130.OpenPush:gradle-plugin:NEW_RELEASE_TAG'
+        classpath 'com.github.josef130.OpenPush:gradle-plugin:be41cc034b'
     }
 }
 ```
@@ -38,7 +39,7 @@ plugins {
 }
 
 dependencies {
-    implementation 'com.github.josef130.OpenPush:sdk:NEW_RELEASE_TAG'
+    implementation 'com.github.josef130.OpenPush:sdk:be41cc034b'
 }
 ```
 

@@ -2,7 +2,7 @@
 
 ## Android SDK
 
-Automatic integration is implemented locally (not added to the published 0.1.0 tag).
+Automatic integration is available through verified JitPack commit be41cc034b (not the older 0.1.0 tag). See [GitHub installation](gradle-plugin/README.md).
 See [three-step setup](docs/AUTOMATIC-SETUP.md): configure Firebase, add the generated
 `openpush.xml` and notification icon, then call `OpenPush.init(this)` in your Activity.
 The optional local Gradle plugin reads app/openpush.xml; see [plugin integration](gradle-plugin/README.md).
