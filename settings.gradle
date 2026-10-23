@@ -4,4 +4,4 @@ dependencyResolutionManagement {
     repositories { google(); mavenCentral() }
 }
 rootProject.name = 'OpenPush'
-include ':core', ':sdk', ':sample'
+include ':core', ':sdk', ':sample', ':gradle-plugin'

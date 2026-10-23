@@ -1,11 +1,27 @@
-plugins { id 'groovy-gradle-plugin' }
-group = 'io.openpush'
-version = '0.1.0-local'
+plugins {
+    id 'groovy-gradle-plugin'
+    id 'maven-publish'
+}
+group = 'com.github.josef130.OpenPush'
+version = providers.gradleProperty('openpushPublicationVersion').getOrElse('0.1.0-local')
 gradlePlugin {
     plugins {
         openpush {
             id = 'io.openpush.android'
             implementationClass = 'io.openpush.gradle.OpenPushPlugin'
+        }
+    }
+}
+
+// Explicit artifact name is identical for standalone and multi-module builds.
+publishing {
+    publications.withType(MavenPublication).configureEach {
+        if (name == 'pluginMaven') artifactId = 'gradle-plugin'
+    }
+    if (project == rootProject) {
+        repositories.maven {
+            name = 'Verification'
+            url = rootProject.layout.buildDirectory.dir('verification-maven')
         }
     }
 }

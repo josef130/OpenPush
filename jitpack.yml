@@ -1,4 +1,4 @@
 jdk:
   - openjdk17
 install:
-  - ./gradlew :core:publishToMavenLocal :sdk:publishToMavenLocal :publishToMavenLocal -PopenpushPublicationVersion=$VERSION
+  - ./gradlew :core:publishToMavenLocal :sdk:publishToMavenLocal :gradle-plugin:publishToMavenLocal :publishToMavenLocal -PopenpushPublicationVersion=$VERSION
