@@ -19,17 +19,7 @@ android {
     }
     testOptions { unitTests.includeAndroidResources = true }
 }
-// A one-line public API must not be published with an invented/missing backend.
-tasks.withType(org.gradle.api.publish.maven.tasks.PublishToMavenLocal).configureEach {
-    doFirst {
-        URI endpoint
-        try { endpoint = new URI(defaultServer) } catch (Exception ignored) { }
-        if (!debugServer.isEmpty() || endpoint == null || endpoint.scheme != 'https' || !endpoint.host || endpoint.userInfo
-                || endpoint.query || endpoint.fragment || !(endpoint.path in ['', '/'])) {
-            throw new GradleException('OpenPush publication requires a real HTTPS origin via openpushDefaultServerUrl or OPENPUSH_SERVER_URL and no openpushDebugServerUrl. Local Verification publishing remains available for USB tests.')
-        }
-    }
-}
+// Root verifyOpenPushPublication guards every public module before publication.
 afterEvaluate { publishing { publications { sdk(MavenPublication) { from components.release } } } }
 dependencies {
     api project(':core')

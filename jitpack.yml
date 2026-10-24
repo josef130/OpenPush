@@ -1,4 +1,7 @@
 jdk:
   - openjdk17
 install:
-  - ./gradlew :core:publishToMavenLocal :sdk:publishToMavenLocal :gradle-plugin:publishToMavenLocal :publishToMavenLocal -PopenpushPublicationVersion=$VERSION
+  # Local/USB development only. DEFAULT_SERVER_URL remains empty for release apps.
+  # Production publication must remove both development properties and set a real HTTPS origin.
+  - ./gradlew verifyOpenPushPublication -PopenpushPublicationVersion=$VERSION -PopenpushDevelopmentPublication=true -PopenpushDebugServerUrl=http://127.0.0.1:4310
+  - ./gradlew :core:publishToMavenLocal :sdk:publishToMavenLocal :gradle-plugin:publishToMavenLocal :publishToMavenLocal -PopenpushPublicationVersion=$VERSION -PopenpushDevelopmentPublication=true -PopenpushDebugServerUrl=http://127.0.0.1:4310
