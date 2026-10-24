@@ -25,6 +25,7 @@ android {
         versionName '0.1.0'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         buildConfigField 'boolean', 'LOCAL_ONLY_BUILD', localOnly.toString()
+        buildConfigField 'String', 'AUTOMATIC_APP_ID', '"' + providers.gradleProperty('openpushAppId').getOrElse(automaticTest.getProperty('appId','')).replace('"','\\"') + '"'
         buildConfigField 'String', 'TELEMETRY_ENDPOINT', '"' + providers.gradleProperty('openpushTelemetryEndpoint').getOrElse('').replace('\\','\\\\').replace('"','\\"') + '"'
     }
     buildTypes {
@@ -41,11 +42,6 @@ android {
         manual { dimension 'integration' }
         automatic {
             dimension 'integration'
-            resValue 'string', 'openpush_server_url', providers.gradleProperty('openpushServerUrl').getOrElse(automaticTest.getProperty('serverUrl',''))
-            resValue 'string', 'openpush_app_id', providers.gradleProperty('openpushAppId').getOrElse(automaticTest.getProperty('appId',''))
-            resValue 'string', 'openpush_project_id', providers.gradleProperty('openpushProjectId').getOrElse(automaticTest.getProperty('projectId',''))
-            resValue 'string', 'openpush_client_key', providers.gradleProperty('openpushClientKey').getOrElse(automaticTest.getProperty('clientKey',''))
-            resValue 'string', 'openpush_web_hosts', 'www.google.com,google.com,example.com,play.google.com'
         }
     }
     sourceSets {

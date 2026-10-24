@@ -1,10 +1,16 @@
 plugins { id 'com.android.library'; id 'maven-publish' }
+def defaultServer = providers.gradleProperty('openpushDefaultServerUrl')
+        .orElse(providers.environmentVariable('OPENPUSH_SERVER_URL')).getOrElse('')
+def debugServer = providers.gradleProperty('openpushDebugServerUrl').getOrElse('')
 android {
+    buildFeatures { buildConfig = true }
     namespace 'io.openpush.sdk'
     compileSdk 35
     publishing { singleVariant('release') { withSourcesJar() } }
     defaultConfig {
         minSdk 21
+        buildConfigField 'String', 'DEFAULT_SERVER_URL', '"' + defaultServer.replace('\\','\\\\').replace('"','\\"') + '"'
+        buildConfigField 'String', 'DEBUG_SERVER_URL', '"' + debugServer.replace('\\','\\\\').replace('"','\\"') + '"'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     compileOptions {
@@ -12,6 +18,17 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
     testOptions { unitTests.includeAndroidResources = true }
+}
+// A one-line public API must not be published with an invented/missing backend.
+tasks.withType(org.gradle.api.publish.maven.tasks.PublishToMavenLocal).configureEach {
+    doFirst {
+        URI endpoint
+        try { endpoint = new URI(defaultServer) } catch (Exception ignored) { }
+        if (!debugServer.isEmpty() || endpoint == null || endpoint.scheme != 'https' || !endpoint.host || endpoint.userInfo
+                || endpoint.query || endpoint.fragment || !(endpoint.path in ['', '/'])) {
+            throw new GradleException('OpenPush publication requires a real HTTPS origin via openpushDefaultServerUrl or OPENPUSH_SERVER_URL and no openpushDebugServerUrl. Local Verification publishing remains available for USB tests.')
+        }
+    }
 }
 afterEvaluate { publishing { publications { sdk(MavenPublication) { from components.release } } } }
 dependencies {

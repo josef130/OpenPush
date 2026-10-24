@@ -22,4 +22,17 @@ public class BackgroundJobsTest {
   assertEquals(2,jobs.size());assertTrue(jobs.get(0).isPersisted());assertFalse(jobs.get(1).isPersisted());
  }
  @Test public void schedulerFailureCannotCrashHost(){assertEquals(JobScheduler.RESULT_FAILURE,BackgroundJobs.submit(job->{throw new SecurityException();},builder(),true));}
+ @Test public void foregroundRegistrationReplacesOldDelayAndThrottlesRepeatedInit()throws Exception{
+  java.lang.reflect.Field last=RegistrationJob.class.getDeclaredField("lastRequestedAt");last.setAccessible(true);last.setLong(null,-1);
+  android.content.Context c=RuntimeEnvironment.getApplication();
+  JobScheduler scheduler=(JobScheduler)c.getSystemService(android.content.Context.JOB_SCHEDULER_SERVICE);
+  try{
+   scheduler.schedule(new JobInfo.Builder(RegistrationJob.ID,new ComponentName(c,RegistrationJob.class)).setMinimumLatency(3600000).build());
+   RegistrationJob.schedule(c);
+   assertEquals(0,scheduler.getPendingJob(RegistrationJob.ID).getMinLatencyMillis());
+   scheduler.schedule(new JobInfo.Builder(RegistrationJob.ID,new ComponentName(c,RegistrationJob.class)).setMinimumLatency(12345).build());
+   RegistrationJob.schedule(c);
+   assertEquals(12345,scheduler.getPendingJob(RegistrationJob.ID).getMinLatencyMillis());
+  }finally{scheduler.cancel(RegistrationJob.ID);last.setLong(null,-1);}
+ }
 }

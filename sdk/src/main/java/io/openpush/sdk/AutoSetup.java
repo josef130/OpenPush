@@ -17,31 +17,29 @@ final class AutoSetup implements Application.ActivityLifecycleCallbacks {
     private static Context owner;
     private static OpenPush instance;
     static String setting(Context c,String name) {
-        int id=c.getResources().getIdentifier(name,"string",c.getPackageName());
-        return id==0?"":c.getString(id).trim();
+        return ClientSettings.value(c,name);
     }
     static synchronized OpenPush get(Context input) {
         Context c=input.getApplicationContext();
         if(owner==c && instance!=null)return instance;
         String endpoint=setting(c,"openpush_server_url");
-        if(endpoint.isEmpty())return null; // Existing explicit builder integrations remain unchanged.
+        if(setting(c,"openpush_app_id").isEmpty())return null; // No automatic app selected yet.
         try {
-            URL server=new URL(endpoint);
-            boolean debug=(c.getApplicationInfo().flags&ApplicationInfo.FLAG_DEBUGGABLE)!=0;
-            boolean loopback="127.0.0.1".equals(server.getHost())||"localhost".equals(server.getHost())||"10.0.2.2".equals(server.getHost());
-            if(!("https".equals(server.getProtocol())||(debug&&loopback&&"http".equals(server.getProtocol())))
-                    || server.getUserInfo()!=null || server.getQuery()!=null || server.getRef()!=null
-                    || !(server.getPath().isEmpty()||"/".equals(server.getPath())))throw new IllegalArgumentException();
-            if(!setting(c,"openpush_app_id").matches("[a-fA-F0-9-]{36}") || !setting(c,"openpush_client_key").matches("[a-f0-9]{64}"))throw new IllegalArgumentException();
-            FirebaseApp firebase=FirebaseApp.getInstance();
-            if(!setting(c,"openpush_project_id").equals(firebase.getOptions().getProjectId()))throw new IllegalArgumentException();
+            ClientSettings.validateEndpoint(c,endpoint);
+            if(!ClientSettings.validId(setting(c,"openpush_app_id")))throw new IllegalArgumentException();
+            String key=setting(c,"openpush_client_key");
+            if(!key.isEmpty()&&!key.matches("[a-f0-9]{64}"))throw new IllegalArgumentException();
+            ClientSettings.project(c);
             Intent launch=c.getPackageManager().getLaunchIntentForPackage(c.getPackageName());
             if(launch==null || launch.getComponent()==null)throw new IllegalArgumentException();
             android.content.pm.ActivityInfo info=c.getPackageManager().getActivityInfo(launch.getComponent(),0);
             Class<? extends Activity> activity=Class.forName(info.targetActivity==null?info.name:info.targetActivity).asSubclass(Activity.class);
             int icon=c.getResources().getIdentifier("openpush_notification_icon","drawable",c.getPackageName());
-            if(icon==0)icon=c.getResources().getIdentifier("ic_notification","drawable",c.getPackageName());
-            if(icon==0)throw new IllegalArgumentException();
+            if(icon==0){
+                ApplicationInfo app=c.getPackageManager().getApplicationInfo(c.getPackageName(),PackageManager.GET_META_DATA);
+                if(app.metaData!=null)icon=app.metaData.getInt("io.openpush.notification_icon",0);
+            }
+            if(icon==0)icon=R.drawable.ic_stat_onesignal_default;
             OpenPush.Builder builder=OpenPush.builder(c,activity,icon).preferGooglePlay()
                 .telemetryEndpoint(base(c)+"/api/events").trackMonthlyActiveUsers(true);
             for(String host:setting(c,"openpush_web_hosts").split(","))if(!host.trim().isEmpty())builder.httpsHost(host.trim());

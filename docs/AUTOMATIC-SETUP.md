@@ -1,80 +1,107 @@
-# Automatic Android setup — unreleased
+# Android SDK setup — App ID API (next release)
 
-## 1. Gradle and Firebase
+The published SDK and Gradle plugin 0.2.0 are the existing baseline. Source edits do
+NOT update that tag. init(Activity, APP_ID), automatic bootstrap and the bundled
+icon below are prepared for a NEW release; local verification is 0.2.1-local.
+Do not tell consumers to call the new overload on an unverified existing 0.2.0.
 
-Add JitPack to dependencyResolutionManagement repositories. Use the approved new
-release when published; the existing 0.1.0 has not been overwritten. Local verification:
+## Prerequisites, once per application
+
+Configure the exact applicationId in Firebase. Keep app/google-services.json and
+the Google Services Gradle plugin. Verify the matching Firebase Admin credentials
+in OpenPush and save the Android package binding in the dashboard. Service Account
+keys stay on the server. No client XML or client key is required for the new API.
+
+## 1. Add the Android library
+
+Add JitPack to the existing dependency repositories. After the new release is
+published and verified, replace NEXT_RELEASE with that tag:
 
 ```groovy
-// Local verification ONLY: repository build/verification-maven
-implementation 'com.github.josef130:OpenPush:0.1.0-local'
+implementation 'com.github.josef130.OpenPush:sdk:NEXT_RELEASE'
 ```
 
-For this checkout's already-built local artifact, add this repository inside
-settings.gradle's dependencyResolutionManagement.repositories:
+Keep existing compatible host Firebase versions/BoM. Inspect the resolved graph;
+wasafat's host-specific Messaging exclusion is not a universal install step.
+
+## 2. Gradle plugin
 
 ```groovy
-maven { url uri('C:/xampp/htdocs/OpenPush/OpenPush/build/verification-maven') }
+// Project build.gradle
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
+    dependencies {
+        classpath 'com.github.josef130.OpenPush:gradle-plugin:NEXT_RELEASE'
+    }
+}
+// app/build.gradle (retain existing plugins)
+plugins { id 'io.openpush.android' }
 ```
 
-In app/build.gradle, apply `id 'com.google.gms.google-services'` alongside the
-existing Android application plugin. Its version belongs in the host's root plugin
-configuration; preserve an existing compatible version. This checkout uses 4.5.0.
+The new plugin does not require openpush.xml. It remains useful for optional
+legacy configuration; the new runtime API does not depend on the importer.
+No includeBuild, local source directory or SDK verification repository is needed
+for a verified public release.
 
-The root POM pulls sdk, core and Firebase Messaging 23.4.1 (Android 5/6 compatible baseline; a host may retain its explicitly tested Firebase version). Enable
-`android.useAndroidX=true` in gradle.properties. Keep a compatible existing Firebase
-BoM and verify resolution. Configure the Google Services plugin and put your app's
-Firebase client google-services.json in app/. API 21+ and Google Play services required. Optional image upgrades require API 23+. See ../gradle-plugin/README.md for the new Gradle configuration plugin.
-
-## 2. App configuration
-
-In the dashboard configure Firebase Admin credentials, then Install and Test →
-Automatic Android SDK configuration. Generate configuration for the exact
-applicationId and save openpush.xml in app/src/main/res/values/.
-It contains openpush_server_url, openpush_app_id, openpush_project_id,
-openpush_client_key and comma-separated openpush_web_hosts. No Admin secrets.
-Add a monochrome drawable/openpush_notification_icon with transparent background.
-
-The current server remains local-only. USB QA uses adb reverse tcp:4310 tcp:4310
-and debug loopback HTTP. Deployed clients need a reachable HTTPS enrollment service;
-deploying a public service also needs authentication/attestation and abuse hardening.
-Client enrollment keys identify apps and permit registration only, not sending or
-dashboard access. Installation secrets are generated privately on each device.
-
-## 3. Activity
+## 3. Initialize Home / MainActivity
 
 ```java
-import io.openpush.sdk.OpenPush;
-// MainActivity.onCreate, after super.onCreate:
-OpenPush.init(this);
+io.openpush.sdk.OpenPush.init(this, "APP_ID_FROM_OPENPUSH");
 ```
 
-Manifest Merger adds initialization, the fallback FCM service and retry jobs. The
-SDK restores configuration in a cold process and updates registration on token
-rotation and foreground entry, preserving an existing administrator unsubscribe.
-Android 13+ permission is requested once; a refusal is respected. No custom
-Application or click forwarding is needed for dashboard data notifications.
+Call after super.onCreate. No custom Application or manually created FCM service
+is needed when OpenPush owns the receiver. App ID is validated and persisted;
+Firebase projectId is read from FirebaseApp and checked against optional legacy
+configuration. A missing Firebase app/project or malformed ID produces a clear
+exception. Repeated initialization of the same app reuses the instance/listeners.
 
-Existing FirebaseMessagingService hosts must keep their service, remove
-io.openpush.sdk.OpenPushMessagingService with tools:node="remove", and call
-OpenPush.receive(this,message) in onMessageReceived (return if true), plus
-OpenPush.refreshRegistration(this) in onNewToken, retaining existing callbacks.
-The library fallback has priority -100, below ordinary host services and above
-Firebase's default -500 service. Multiple host services require explicit resolution;
-FCM does not broadcast a message independently to all of them.
+Background registration retrieves a PUBLIC per-app enrollment key from
+/api/sdk/bootstrap using the App ID, actual Firebase projectId and package name.
+The server rejects a mismatched/unconfigured app; the response exposes no Admin
+credentials, device tokens, installation secrets or sending capability. The SDK
+checks response scope, caches the public key and retains installation-secret/token
+rotation and retry behavior. This is public enrollment, not app attestation.
 
-Advanced routing still supports the existing builder API. Automatic deep-link
-configuration may use a string-array openpush_deep_links whose entries are
-scheme|host|path|fully.qualified.Activity; matching manifest filters remain required.
-Only approved website hosts open. Google Play routing keeps the existing official
-Store selection and HTTPS fallback. Click ledger and unique PendingIntent IDs remain.
+The bundled drawable ic_stat_onesignal_default.png is the default small icon used
+by Notification.Builder. Optional drawable/openpush_notification_icon retains its
+legacy precedence; otherwise io.openpush.notification_icon metadata can customize
+it. The SDK supplies its own existing default asset, so no icon file is required.
 
-Test dashboard → phone → displayed receipt before tap → clicked receipt after tap.
-Plain Firebase Console Notification + Data has different background system behavior;
-existing hosts may still need onCreate/onNewIntent forwarding for those messages.
-Force stop and OEM restrictions cannot be bypassed or treated as guaranteed delivery.
+Default approved hosts: www.google.com, google.com, play.google.com. Existing
+optional openpush_web_hosts and deep-link rules remain supported. Google Play,
+web resolution, unique PendingIntent and at-most-once click behavior are unchanged.
 
-If another dependency removes RECEIVE_BOOT_COMPLETED from the merged manifest,
-registration and receipts use non-persisted network jobs instead of crashing. Receipt
-events remain in private durable storage and can resume on a later app/FCM start;
-without boot permission, the SDK does not promise job restoration immediately after reboot.
+## Backend default: required before publication
+
+No real public HTTPS endpoint has been supplied for this installation. We do NOT
+invent a production hostname or ship localhost as a production default. The SDK
+publisher must set openpushDefaultServerUrl or OPENPUSH_SERVER_URL to the actual
+HTTPS origin. Public Maven-local/JitPack publication rejects a missing/non-HTTPS
+origin. Once compiled into the release, consumers need not pass it in Activities.
+Optional existing resource configuration can override it for a self-hosted backend.
+
+USB-only verification builds set -PopenpushDebugServerUrl=http://127.0.0.1:4310,
+use adb reverse tcp:4310 tcp:4310 and a debuggable consumer. DEFAULT_SERVER_URL
+stays empty until the real HTTPS origin is supplied. Release consumers never use
+DEBUG_SERVER_URL; public publication also rejects any configured debug endpoint.
+This verification artifact is not suitable for Google Play production.
+
+The endpoint is central in the SDK build, not in Activity code. Changing a compiled
+endpoint requires a new SDK and consumer app update. Keeping a stable HTTPS domain
+allows its infrastructure to move through DNS without changing installed apps.
+
+## Compatibility and device checks
+
+Old init(Activity), explicit builders and optional XML remain supported. Keep any
+existing FirebaseMessagingService and use explicit delegation where required;
+FCM does not independently deliver the same message to multiple services. Do not
+silently remove another push SDK. Android 13 permission and OEM battery policies
+remain user-controlled. Force-stop delivery is not guaranteed.
+
+Check real display receipt before click, click receipt after one tap, image/text,
+foreground/background and process removal. Robolectric and successful builds do
+not prove arrival or Google Play navigation on a physical device.

@@ -24,11 +24,18 @@ import java.util.concurrent.TimeUnit;
 public final class RegistrationJob extends JobService {
  static final int ID=0x4f505247;
  private volatile int generation;
- static void schedule(Context c){
+ private static long lastRequestedAt=-1;
+ static synchronized void schedule(Context c){
   try{
    JobScheduler scheduler=(JobScheduler)c.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-   if(scheduler!=null && BackgroundJobs.pending(scheduler,ID)==null)BackgroundJobs.submit(c,scheduler,new JobInfo.Builder(ID,new ComponentName(c,RegistrationJob.class))
+   long now=android.os.SystemClock.elapsedRealtime();
+   if(scheduler==null)return;
+   // A prior installation/configuration failure may have hours of scheduler backoff.
+   // A foreground request refreshes it, but repeated lifecycle/init calls are throttled.
+   if(BackgroundJobs.pending(scheduler,ID)!=null && lastRequestedAt>=0 && now-lastRequestedAt<60000)return;
+   BackgroundJobs.submit(c,scheduler,new JobInfo.Builder(ID,new ComponentName(c,RegistrationJob.class))
      .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY).setBackoffCriteria(30000,JobInfo.BACKOFF_POLICY_EXPONENTIAL));
+   lastRequestedAt=now;
   }catch(RuntimeException unavailable){android.util.Log.w("OpenPushRegistration","SCHEDULING_DEFERRED");}
  }
  interface Transport{int post(JSONObject body)throws Exception;}
@@ -55,6 +62,7 @@ public final class RegistrationJob extends JobService {
  }
  static boolean upload(Context c,String token,Transport transport)throws Exception{
   int status=transport.post(body(c,token));
+  if(status==403)ClientSettings.invalidateKey(c);
   if(status==200){
    byte[] digest=java.security.MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8));
    StringBuilder hash=new StringBuilder();for(byte b:digest)hash.append(String.format(java.util.Locale.ROOT,"%02x",b&255));
@@ -69,6 +77,7 @@ public final class RegistrationJob extends JobService {
    boolean retry=true;
    try{
     if(AutoSetup.get(this)!=null){
+     ClientBootstrap.ensure(this);
      String token=Tasks.await(FirebaseMessaging.getInstance().getToken(),20,TimeUnit.SECONDS);
      if(current==generation)retry=upload(this,token,body->{
       HttpURLConnection connection=(HttpURLConnection)new URL(AutoSetup.base(this)+"/api/sdk/register").openConnection();

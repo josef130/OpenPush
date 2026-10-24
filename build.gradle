@@ -6,7 +6,7 @@ plugins {
 }
 
 // Unreleased local verification version. A Git tag/release is never changed by this build.
-def publicationVersion = providers.gradleProperty('openpushPublicationVersion').getOrElse('0.1.0-local')
+def publicationVersion = providers.gradleProperty('openpushPublicationVersion').getOrElse('0.2.1-local')
 group = 'com.github.josef130'
 version = publicationVersion
 subprojects {

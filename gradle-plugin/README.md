@@ -1,104 +1,19 @@
-# OpenPush Gradle plugin — Maven / JitPack integration
+# OpenPush Gradle plugin (next release)
 
-Verified on 2026-10-23: GitHub commit be41cc034b78ce2af5f0136766251c340b11db68
-was built successfully by JitPack. The examples below use its immutable short
-commit version be41cc034b for BOTH SDK and plugin. The older tag 0.1.0 does NOT
-contain these publications. Use a new verified tag later; do not replace 0.1.0.
-No local source directories, includeBuild or verification Maven are needed.
-## 1. Project-level build.gradle: plugin classpath
+Current published baseline: com.github.josef130.OpenPush:gradle-plugin:0.2.0.
+The source change makes openpush.xml optional for the new init(Activity, APP_ID)
+SDK API. Existing published files are not overwritten. Local verification uses
+0.2.1-local; publish and verify a NEW tag before documenting it as available.
 
-Merge these entries into the existing buildscript block; retain AGP and other plugins:
+See ../docs/AUTOMATIC-SETUP.md for the complete three-step public integration.
+The plugin JAR is resolved from JitPack via root buildscript classpath and applied
+with id io.openpush.android in app/build.gradle. Source includeBuild is unnecessary.
 
-```groovy
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-        maven { url 'https://jitpack.io' }
-    }
-    dependencies {
-        classpath 'com.github.josef130.OpenPush:gradle-plugin:be41cc034b'
-    }
-}
-```
+If app/openpush.xml exists, the importer still parses/validates it securely and
+generates its resources for legacy integrations. If absent, it does nothing and
+does not block Android DSL evaluation. The new SDK supplies its icon itself.
+No network request or Service Account processing occurs in this build plugin.
 
-This resolves the build-time plugin JAR. It does not go into the Android APK.
-The plugin ID is not a Maven coordinate: io.openpush.android remains unchanged.
-No includeBuild, local source directory or verification-maven path is needed after
-publication. Plugins DSL with the version omitted works when its implementation
-is already on the root buildscript classpath. The older apply-plugin syntax is
-also supported.
-
-## 2. app/build.gradle: plugin and Android library
-
-```groovy
-plugins {
-    id 'com.android.application'
-    id 'com.google.gms.google-services'
-    id 'io.openpush.android'
-}
-
-dependencies {
-    implementation 'com.github.josef130.OpenPush:sdk:be41cc034b'
-}
-```
-
-Use the sdk module explicitly to avoid depending on a repository-wide aggregate
-that might include build-tool modules. sdk's POM supplies core and Firebase Messaging.
-Keep any existing host Firebase declaration/BoM; inspect Gradle's resolved version.
-wasafat specifically retains its older validated Messaging 21.1.0 by excluding the
-transitive Messaging dependency. This exclusion is not a universal install step.
-
-Also allow JitPack in the application's normal dependency repositories, usually
-settings.gradle (merge into the existing block):
-
-```groovy
-dependencyResolutionManagement {
-    repositories {
-        google()
-        mavenCentral()
-        maven { url 'https://jitpack.io' }
-    }
-}
-```
-
-buildscript.repositories and dependencyResolutionManagement.repositories have
-separate purposes: one resolves plugins, the other the Android dependency.
-
-## 3. Main Activity
-
-In onCreate after super.onCreate:
-
-```java
-io.openpush.sdk.OpenPush.init(this);
-```
-
-No custom Application or manually created Firebase service is required when
-OpenPush is the sole FCM owner. Existing host services need explicit delegation;
-do not initialize another competing push SDK.
-
-## Mandatory app configuration
-
-Configure Firebase for the real application package. Keep google-services.json
-in app/ and configure matching Firebase Admin credentials on the dashboard server
-ONLY. Put the OpenPush client resource XML at app/openpush.xml (server URL, app ID,
-project ID, public enrollment key and allowed hosts). Supply the notification icon.
-The Activity needs no App ID. A distributed app requires a reachable HTTPS backend.
-Gradle plugin publication cannot eliminate these app-specific configuration inputs.
-
-The plugin rejects DTDs, generates Android resources and blocks release packaging
-with non-HTTPS endpoints. It never uploads credentials or contacts Firebase.
-Phone notification permissions and battery policies remain user controlled.
-
-## Maintainer publication
-
-The plugin is a normal :gradle-plugin subproject with maven-publish. Its publication
-is com.github.josef130.OpenPush:gradle-plugin:TAG. jitpack.yml explicitly publishes
-core, sdk, gradle-plugin and the existing root POM to Maven local during JitPack's
-build, using openpushPublicationVersion=$VERSION. It does not build sample or
-require the sample's real google-services.json.
-
-Publish a new approved tag; do not replace 0.1.0. Verify the remote JAR and POM,
-then sync/build an independent Android consumer using only HTTPS repositories.
-Local Maven tests are necessary preparation, not evidence of successful JitPack
-publication. Tested local toolchain: JDK17 / Gradle8.14.3 / Android host AGP8.11.1.
+The publisher must provide a real HTTPS OPENPUSH_SERVER_URL for the SDK's default
+backend before JitPack publication. Do not invent a hostname or silently publish
+the USB loopback verification configuration.

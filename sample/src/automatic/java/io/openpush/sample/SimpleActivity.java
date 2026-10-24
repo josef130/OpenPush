@@ -7,7 +7,7 @@ import io.openpush.sdk.OpenPush;
 public final class SimpleActivity extends Activity {
  @Override public void onCreate(Bundle state){
   super.onCreate(state);
-  OpenPush.init(this);
+  OpenPush.init(this,BuildConfig.AUTOMATIC_APP_ID);
   TextView text=new TextView(this);text.setText("OpenPush automatic integration\nNo host FirebaseMessagingService\nNo custom Application");text.setPadding(32,64,32,32);setContentView(text);
  }
 }

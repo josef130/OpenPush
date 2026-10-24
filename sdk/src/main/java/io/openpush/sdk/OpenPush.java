@@ -25,6 +25,11 @@ import java.util.Map;
 public final class OpenPush {
     private static volatile OpenPush notificationInstance;
     boolean automatic;
+    /** Select the dashboard app once; Firebase project and enrollment are automatic. */
+    public static void init(Activity activity,String appId) {
+        ClientSettings.initialize(activity.getApplicationContext(),appId);
+        init(activity);
+    }
     /** Declarative setup; safe to call again from MainActivity after process recreation. */
     public static void init(Activity activity) {
         OpenPush push=AutoSetup.get(activity);

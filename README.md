@@ -2,13 +2,12 @@
 
 ## Android SDK
 
-Automatic integration is available through verified JitPack commit be41cc034b (not the older 0.1.0 tag). See [GitHub installation](gradle-plugin/README.md).
-See [three-step setup](docs/AUTOMATIC-SETUP.md): configure Firebase, add the generated
-`openpush.xml` and notification icon, then call `OpenPush.init(this)` in your Activity.
-The optional local Gradle plugin reads app/openpush.xml; see [plugin integration](gradle-plugin/README.md).
-New apps need no custom Application or FirebaseMessagingService. Existing services
-must delegate explicitly; the manual builder API below remains supported.
-
+The existing published baseline is 0.2.0. This source prepares a NEW release with
+`OpenPush.init(this, "APP_ID")`, automatic Firebase project detection and public
+server bootstrap. `openpush.xml` is no longer required for the new API. See
+[three-step setup](docs/AUTOMATIC-SETUP.md). Verification builds use 0.2.1-local;
+no existing tag is overwritten. A real default HTTPS backend must be supplied by
+the SDK publisher before public publication. Legacy resource and builder APIs remain.
 Java Android library for Firebase Console notification clicks, central routing rules,
 web URLs, Google Play links/package names, declared deep links and custom actions. The Android modules contain no sending keys or service-account credentials. MIT licensed. API 21+, compileSdk 35, Java 8 source.
 This checkout builds with JDK 17, Gradle 8.14.3 and AGP 8.10.1.

@@ -10,7 +10,9 @@ class OpenPushPlugin implements Plugin<Project> {
     void apply(Project project) {
         project.pluginManager.withPlugin('com.android.application') {
             File config = project.file('openpush.xml')
-            if (!config.isFile()) throw new GradleException('OpenPush: add the client configuration app/openpush.xml. Never use a Service Account file.')
+            // init(Activity, APP_ID) uses SDK defaults and public server bootstrap.
+            // Retain this optional importer for existing applications only.
+            if (!config.isFile()) return
             def factory = DocumentBuilderFactory.newInstance()
             factory.setFeature('http://apache.org/xml/features/disallow-doctype-decl', true)
             factory.setExpandEntityReferences(false)

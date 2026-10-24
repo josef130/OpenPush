@@ -3,7 +3,7 @@ plugins {
     id 'maven-publish'
 }
 group = 'com.github.josef130.OpenPush'
-version = providers.gradleProperty('openpushPublicationVersion').getOrElse('0.1.0-local')
+version = providers.gradleProperty('openpushPublicationVersion').getOrElse('0.2.1-local')
 gradlePlugin {
     plugins {
         openpush {
