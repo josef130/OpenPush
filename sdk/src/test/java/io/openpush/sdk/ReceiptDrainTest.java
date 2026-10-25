@@ -42,6 +42,20 @@ public class ReceiptDrainTest {
         assertTrue(c.getSharedPreferences(ReceiptQueue.PREFS,0).contains("event:"+data().get("op_receipt")+":displayed"));
     }
 
+    @Test public void offlineLegacyEndpointCannotBlockCentralReceipt() throws Exception {
+        Context c=context();SharedPreferences p=c.getSharedPreferences(ReceiptQueue.PREFS,0);
+        long now=System.currentTimeMillis();
+        p.edit().putString("event:legacy",new JSONObject().put("event","received").put("queuedAt",now).toString())
+            .putString("event:central",new JSONObject().put("event","displayed").put("transport","firestore").put("queuedAt",now).toString()).commit();
+        List<String> uploaded=new ArrayList<>();
+        assertTrue(ReceiptJobService.drain(c,()->true,body->{
+            if(!"firestore".equals(body.optString("transport")))throw new java.io.IOException("offline");
+            uploaded.add(body.getString("event"));return 200;
+        }));
+        assertEquals(Collections.singletonList("displayed"),uploaded);
+        assertTrue(p.contains("event:legacy"));assertFalse(p.contains("event:central"));
+    }
+
     @Test public void newerSessionIsNotRemovedByAnOlderUpload() throws Exception {
         Context c=context(); SharedPreferences prefs=c.getSharedPreferences(ReceiptQueue.PREFS,0);
         String key="event:session:test";

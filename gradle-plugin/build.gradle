@@ -3,7 +3,10 @@ plugins {
     id 'maven-publish'
 }
 group = 'com.github.josef130.OpenPush'
-version = providers.gradleProperty('openpushPublicationVersion').getOrElse('0.2.1-local')
+// Multi-module publication inherits the same release version as :sdk from root.
+if (project == rootProject) {
+    version = providers.gradleProperty('openpushPublicationVersion').getOrElse('0.2.1-local')
+}
 gradlePlugin {
     plugins {
         openpush {

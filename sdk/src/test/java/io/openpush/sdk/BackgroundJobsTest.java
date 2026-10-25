@@ -35,4 +35,16 @@ public class BackgroundJobsTest {
    assertEquals(12345,scheduler.getPendingJob(RegistrationJob.ID).getMinLatencyMillis());
   }finally{scheduler.cancel(RegistrationJob.ID);last.setLong(null,-1);}
  }
+ @Test public void centralReceiptReplacesLegacyDelayWithoutRepeatedRescheduling()throws Exception{
+  java.lang.reflect.Field last=ReceiptQueue.class.getDeclaredField("lastCentralSchedule");last.setAccessible(true);last.setLong(null,-1);
+  android.content.Context c=RuntimeEnvironment.getApplication();
+  JobScheduler scheduler=(JobScheduler)c.getSystemService(android.content.Context.JOB_SCHEDULER_SERVICE);
+  try{
+   c.getSharedPreferences(ReceiptQueue.PREFS,0).edit().clear().putString("event:central",new org.json.JSONObject().put("transport","firestore").toString()).commit();
+   scheduler.schedule(new JobInfo.Builder(ReceiptQueue.JOB_ID,new ComponentName(c,ReceiptJobService.class)).setMinimumLatency(3600000).build());
+   ReceiptQueue.schedule(c);assertEquals(0,scheduler.getPendingJob(ReceiptQueue.JOB_ID).getMinLatencyMillis());
+   scheduler.schedule(new JobInfo.Builder(ReceiptQueue.JOB_ID,new ComponentName(c,ReceiptJobService.class)).setMinimumLatency(12345).build());
+   ReceiptQueue.schedule(c);assertEquals(12345,scheduler.getPendingJob(ReceiptQueue.JOB_ID).getMinLatencyMillis());
+  }finally{scheduler.cancel(ReceiptQueue.JOB_ID);last.setLong(null,-1);}
+ }
 }

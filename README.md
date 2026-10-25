@@ -1,5 +1,9 @@
 # OpenPush Android SDK
 
+Unpublished central Firebase transport work is documented in
+[CENTRAL-FIRESTORE.md](docs/CENTRAL-FIRESTORE.md). Existing released artifacts
+are not changed by edits to this checkout.
+
 ## Android SDK
 
 The existing published baseline is 0.2.0. This source prepares a NEW release with

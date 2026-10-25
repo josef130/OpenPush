@@ -39,6 +39,12 @@ public final class RegistrationJob extends JobService {
   }catch(RuntimeException unavailable){android.util.Log.w("OpenPushRegistration","SCHEDULING_DEFERRED");}
  }
  interface Transport{int post(JSONObject body)throws Exception;}
+ static boolean notificationsEnabled(Context c){
+  NotificationManager manager=(NotificationManager)c.getSystemService(Context.NOTIFICATION_SERVICE);
+  boolean enabled=androidx.core.app.NotificationManagerCompat.from(c).areNotificationsEnabled();
+  if(Build.VERSION.SDK_INT>=26){NotificationChannel channel=manager.getNotificationChannel(OpenPush.CHANNEL_ID);enabled &= channel==null || channel.getImportance()!=NotificationManager.IMPORTANCE_NONE;}
+  return enabled;
+ }
  static synchronized JSONObject body(Context c,String token)throws Exception{
   SharedPreferences p=c.getSharedPreferences("openpush.registration.v1",MODE_PRIVATE);
   // Detect restore onto another installation; noBackupFilesDir is never cloud-restored.
@@ -53,9 +59,7 @@ public final class RegistrationJob extends JobService {
    StringBuilder encoded=new StringBuilder();for(byte value:bytes)encoded.append(String.format(java.util.Locale.ROOT,"%02x",value&255));secret=encoded.toString();
    if(!p.edit().putString("id",id).putString("secret",secret).commit())throw new java.io.IOException();
   }
-  NotificationManager manager=(NotificationManager)c.getSystemService(Context.NOTIFICATION_SERVICE);
-  boolean enabled=androidx.core.app.NotificationManagerCompat.from(c).areNotificationsEnabled();
-  if(Build.VERSION.SDK_INT>=26){NotificationChannel channel=manager.getNotificationChannel(OpenPush.CHANNEL_ID);enabled &= channel==null || channel.getImportance()!=NotificationManager.IMPORTANCE_NONE;}
+  boolean enabled=notificationsEnabled(c);
   return new JSONObject().put("appId",AutoSetup.setting(c,"openpush_app_id")).put("projectId",AutoSetup.setting(c,"openpush_project_id"))
     .put("packageName",c.getPackageName()).put("clientKey",AutoSetup.setting(c,"openpush_client_key"))
     .put("installationId",id).put("installationSecret",secret).put("token",token).put("notificationsEnabled",enabled);
@@ -77,9 +81,11 @@ public final class RegistrationJob extends JobService {
    boolean retry=true;
    try{
     if(AutoSetup.get(this)!=null){
-     ClientBootstrap.ensure(this);
+     boolean central=CentralTransport.enabled(this);
+     if(!central)ClientBootstrap.ensure(this);
      String token=Tasks.await(FirebaseMessaging.getInstance().getToken(),20,TimeUnit.SECONDS);
-     if(current==generation)retry=upload(this,token,body->{
+     if(current==generation && central){CentralTransport.client(this).register(token,notificationsEnabled(this));retry=false;}
+     else if(current==generation)retry=upload(this,token,body->{
       HttpURLConnection connection=(HttpURLConnection)new URL(AutoSetup.base(this)+"/api/sdk/register").openConnection();
       try{
        connection.setInstanceFollowRedirects(false);connection.setConnectTimeout(5000);connection.setReadTimeout(5000);

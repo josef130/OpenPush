@@ -27,13 +27,18 @@ public final class OpenPush {
     boolean automatic;
     /** Select the dashboard app once; Firebase project and enrollment are automatic. */
     public static void init(Activity activity,String appId) {
-        ClientSettings.initialize(activity.getApplicationContext(),appId);
-        init(activity);
+        try {
+            ClientSettings.initialize(activity.getApplicationContext(),appId);
+            init(activity);
+        } catch(RuntimeException unavailable) {
+            android.util.Log.w("OpenPushSetup","INITIALIZATION_DEFERRED");
+        }
     }
     /** Declarative setup; safe to call again from MainActivity after process recreation. */
     public static void init(Activity activity) {
+        if(CentralTransport.enabled(activity))CentralTransport.foreground(activity);
         OpenPush push=AutoSetup.get(activity);
-        if(push==null)throw new IllegalStateException("OpenPush configuration missing; see Android SDK setup");
+        if(push==null){android.util.Log.w("OpenPushSetup","INITIALIZATION_DEFERRED");return;}
         AutoSetup.register(activity);
         push.handleIntent(activity,activity.getIntent());
         if(Build.VERSION.SDK_INT>=33 && activity.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED) {
@@ -46,6 +51,7 @@ public final class OpenPush {
     }
     /** Existing host FCM services delegate here instead of registering another receiver. */
     public static boolean receive(Context context,RemoteMessage message){
+        if(CentralTransport.challenge(context,message.getData()))return true;
         OpenPush push=AutoSetup.get(context);
         if(push==null)push=notificationInstance;
         return push!=null && push.showNotification(message);
@@ -148,6 +154,7 @@ public final class OpenPush {
     /** True means owned by OpenPush, even if malformed, disabled or permission denied. */
     public boolean showNotification(RemoteMessage message) {
         Map<String, String> data = message.getData();
+        if(CentralTransport.challenge(context,data))return true;
         // Queue reception first, but schedule only after the synchronous display outcome
         // is durable. Otherwise a receipt job can snapshot only received and defer displayed.
         ReceiptQueue.enqueue(context,data,"received",telemetryEnabled,false);

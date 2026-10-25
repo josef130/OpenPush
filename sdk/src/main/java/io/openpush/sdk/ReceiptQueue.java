@@ -15,6 +15,7 @@ final class ReceiptQueue {
     static final Object LOCK = new Object();
     static final String PREFS = "openpush.receipts.v1";
     static final int JOB_ID = 0x4f505243;
+    private static long lastCentralSchedule=-1;
     static void uploadStatus(Context context, String status) {
         // Fixed outcomes only: never include payloads, capabilities, token hashes or URLs.
         context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).edit()
@@ -30,7 +31,18 @@ final class ReceiptQueue {
             boolean loopback = "127.0.0.1".equals(url.getHost()) || "localhost".equals(url.getHost()) || "10.0.2.2".equals(url.getHost());
             if (!("https".equals(url.getProtocol()) || (debug && loopback && "http".equals(url.getProtocol())))
                     || url.getUserInfo()!=null || url.getRef()!=null || url.getQuery()!=null) throw new IllegalArgumentException();
-            context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).edit().putString("endpoint",endpoint).commit();
+            synchronized(LOCK) {
+                SharedPreferences prefs=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE);
+                SharedPreferences.Editor edit=prefs.edit();
+                String previous=prefs.getString("endpoint","");
+                // Preserve the original destination of durable HTTP events during migration.
+                for(Map.Entry<String,?> entry:prefs.getAll().entrySet())if(entry.getKey().startsWith("event:")) {
+                    JSONObject body=new JSONObject((String)entry.getValue());
+                    if(!body.has("transport") && !body.has("uploadEndpoint") && !previous.isEmpty())
+                        edit.putString(entry.getKey(),body.put("uploadEndpoint",previous).toString());
+                }
+                edit.putString("endpoint",endpoint).putString("transport",CentralTransport.marker().equals(endpoint)?"firestore":"http").commit();
+            }
             schedule(context);
         } catch (Exception invalid) { throw new IllegalArgumentException("Telemetry requires an HTTPS endpoint (debug loopback HTTP allowed)"); }
     }
@@ -47,6 +59,10 @@ final class ReceiptQueue {
             if(prefs.contains(key))return;
             if(prefs.getAll().size()>1000)return;
             JSONObject body=new JSONObject().put("token",token).put("event",event).put("queuedAt",System.currentTimeMillis());
+            if("firestore".equals(prefs.getString("transport","http"))){
+                String messageId=data.get("op_id");if(!ClientSettings.validId(messageId))return;
+                body.put("transport","firestore").put("messageId",messageId);
+            }
             if(!prefs.edit().putString(key,body.toString()).commit())return;
         } if (scheduleUpload) schedule(context); } catch(RuntimeException | org.json.JSONException ignored) { /* Analytics never break delivery. */ }
     }
@@ -69,12 +85,20 @@ final class ReceiptQueue {
             if(!prefs.edit().putString("event:session:"+deviceTokenHash+":"+day,body.toString()).putString("lastSession",marker).commit()) return;
         } schedule(context); } catch(RuntimeException | org.json.JSONException ignored) { /* Analytics never affect the host UI. */ }
     }
-    static void schedule(Context context) {
-        boolean hasEvents=false;
-        for(String key:context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).getAll().keySet())if(key.startsWith("event:")){hasEvents=true;break;}
+    static synchronized void schedule(Context context) {
+        boolean hasEvents=false,hasCentral=false;
+        for(Map.Entry<String,?> entry:context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).getAll().entrySet())if(entry.getKey().startsWith("event:")){
+            hasEvents=true;
+            try{hasCentral |= "firestore".equals(new JSONObject((String)entry.getValue()).optString("transport"));}catch(Exception ignored){}
+        }
         if(!hasEvents)return;
         JobScheduler scheduler=(JobScheduler)context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-        if(scheduler==null || BackgroundJobs.pending(scheduler,JOB_ID)!=null)return;
+        if(scheduler==null)return;
+        long now=android.os.SystemClock.elapsedRealtime();
+        if(BackgroundJobs.pending(scheduler,JOB_ID)!=null && (!hasCentral || (lastCentralSchedule>=0 && now-lastCentralSchedule<60000)))return;
+        // A fresh central receipt must not inherit hours of legacy HTTP backoff.
+        // Throttle replacements; the worker drains events that arrive while running.
+        if(hasCentral)lastCentralSchedule=now;
         try { int result=BackgroundJobs.submit(context,scheduler,new JobInfo.Builder(JOB_ID,new ComponentName(context,ReceiptJobService.class))
                 .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
                 .setBackoffCriteria(30000,JobInfo.BACKOFF_POLICY_EXPONENTIAL));

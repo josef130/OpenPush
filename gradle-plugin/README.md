@@ -14,6 +14,6 @@ generates its resources for legacy integrations. If absent, it does nothing and
 does not block Android DSL evaluation. The new SDK supplies its icon itself.
 No network request or Service Account processing occurs in this build plugin.
 
-The publisher must provide a real HTTPS OPENPUSH_SERVER_URL for the SDK's default
-backend before JitPack publication. Do not invent a hostname or silently publish
-the USB loopback verification configuration.
+The publisher must provide a real HTTPS OPENPUSH_SERVER_URL before PRODUCTION
+publication. The current jitpack.yml explicitly opts into DEVELOPMENT-only USB
+publication; its production endpoint remains empty. See ../docs/RELEASE-VERSIONS.md.

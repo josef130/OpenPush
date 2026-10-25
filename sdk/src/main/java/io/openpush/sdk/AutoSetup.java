@@ -25,7 +25,7 @@ final class AutoSetup implements Application.ActivityLifecycleCallbacks {
         String endpoint=setting(c,"openpush_server_url");
         if(setting(c,"openpush_app_id").isEmpty())return null; // No automatic app selected yet.
         try {
-            ClientSettings.validateEndpoint(c,endpoint);
+            if(!CentralTransport.enabled(c))ClientSettings.validateEndpoint(c,endpoint);
             if(!ClientSettings.validId(setting(c,"openpush_app_id")))throw new IllegalArgumentException();
             String key=setting(c,"openpush_client_key");
             if(!key.isEmpty()&&!key.matches("[a-f0-9]{64}"))throw new IllegalArgumentException();
@@ -41,7 +41,8 @@ final class AutoSetup implements Application.ActivityLifecycleCallbacks {
             }
             if(icon==0)icon=R.drawable.ic_stat_onesignal_default;
             OpenPush.Builder builder=OpenPush.builder(c,activity,icon).preferGooglePlay()
-                .telemetryEndpoint(base(c)+"/api/events").trackMonthlyActiveUsers(true);
+                .telemetryEndpoint(CentralTransport.enabled(c)?CentralTransport.marker():base(c)+"/api/events")
+                .trackMonthlyActiveUsers(!CentralTransport.enabled(c));
             for(String host:setting(c,"openpush_web_hosts").split(","))if(!host.trim().isEmpty())builder.httpsHost(host.trim());
             builder.httpsHost("play.google.com");
             int links=c.getResources().getIdentifier("openpush_deep_links","array",c.getPackageName());
@@ -65,7 +66,7 @@ final class AutoSetup implements Application.ActivityLifecycleCallbacks {
     }
     static String base(Context c){return setting(c,"openpush_server_url").replaceAll("/+$","");}
     static void register(Context c){ if(get(c)!=null)RegistrationJob.schedule(c); }
-    public void onActivityResumed(Activity a){register(a);}
+    public void onActivityResumed(Activity a){if(CentralTransport.enabled(a))CentralTransport.foreground(a);register(a);}
     public void onActivityCreated(Activity a,Bundle state){
         if(!(a instanceof OpenPushClickActivity) && instance!=null)instance.handleIntent(a,a.getIntent());
     }

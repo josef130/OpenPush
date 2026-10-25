@@ -2,6 +2,9 @@ plugins { id 'com.android.library'; id 'maven-publish' }
 def defaultServer = providers.gradleProperty('openpushDefaultServerUrl')
         .orElse(providers.environmentVariable('OPENPUSH_SERVER_URL')).getOrElse('')
 def debugServer = providers.gradleProperty('openpushDebugServerUrl').getOrElse('')
+def central = new Properties()
+def centralFile = rootProject.file('central-firebase.properties')
+if (centralFile.isFile()) centralFile.withInputStream { central.load(it) }
 android {
     buildFeatures { buildConfig = true }
     namespace 'io.openpush.sdk'
@@ -9,6 +12,9 @@ android {
     publishing { singleVariant('release') { withSourcesJar() } }
     defaultConfig {
         minSdk 21
+        ['PROJECT_ID':'projectId','APPLICATION_ID':'applicationId','API_KEY':'apiKey'].each { field, key ->
+            buildConfigField 'String', 'CENTRAL_' + field, '"' + central.getProperty(key,'').replace('\\','\\\\').replace('"','\\"') + '"'
+        }
         buildConfigField 'String', 'DEFAULT_SERVER_URL', '"' + defaultServer.replace('\\','\\\\').replace('"','\\"') + '"'
         buildConfigField 'String', 'DEBUG_SERVER_URL', '"' + debugServer.replace('\\','\\\\').replace('"','\\"') + '"'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'

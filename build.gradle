@@ -9,6 +9,36 @@ plugins {
 def publicationVersion = providers.gradleProperty('openpushPublicationVersion').getOrElse('0.2.1-local')
 group = 'com.github.josef130'
 version = publicationVersion
+// Validate before ANY module publishes, rather than leaving a partial release.
+def verifyPublication = tasks.register('verifyOpenPushPublication') {
+    doLast {
+        def server = providers.gradleProperty('openpushDefaultServerUrl')
+                .orElse(providers.environmentVariable('OPENPUSH_SERVER_URL')).getOrElse('')
+        def debugServer = providers.gradleProperty('openpushDebugServerUrl').getOrElse('')
+        URI endpoint
+        try { endpoint = new URI(server) } catch (Exception ignored) { }
+        if (providers.gradleProperty('openpushDevelopmentPublication').getOrElse('false') == 'true') {
+            URI debugEndpoint
+            try { debugEndpoint = new URI(debugServer) } catch (Exception ignored) { }
+            if (!server.isEmpty() || debugEndpoint == null || debugEndpoint.scheme != 'http'
+                    || !(debugEndpoint.host in ['127.0.0.1','localhost','10.0.2.2']) || debugEndpoint.userInfo
+                    || debugEndpoint.query || debugEndpoint.fragment || !(debugEndpoint.path in ['', '/'])) {
+                throw new GradleException('Development publication requires an empty production URL and an explicit loopback HTTP debug origin.')
+            }
+            logger.lifecycle('OpenPush DEVELOPMENT publication only: release consumers have no production endpoint; USB Debug setup is required.')
+            return
+        }
+        if (!debugServer.isEmpty() || endpoint == null || endpoint.scheme != 'https' || !endpoint.host || endpoint.userInfo
+                || endpoint.query || endpoint.fragment || !(endpoint.path in ['', '/'])) {
+            throw new GradleException('OpenPush publication requires a real HTTPS origin via openpushDefaultServerUrl or OPENPUSH_SERVER_URL and no openpushDebugServerUrl. Configure it in JitPack before building the tag; SDK and gradle-plugin must be published from the same successful tag. Verification builds remain available locally.')
+        }
+    }
+}
+allprojects {
+    tasks.withType(org.gradle.api.publish.maven.tasks.PublishToMavenLocal).configureEach {
+        dependsOn verifyPublication
+    }
+}
 subprojects {
     group = 'com.github.josef130.OpenPush'
     version = publicationVersion

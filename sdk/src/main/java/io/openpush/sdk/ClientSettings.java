@@ -61,7 +61,8 @@ final class ClientSettings {
         appId=appId.toLowerCase(java.util.Locale.ROOT);
         String existing=value(c,"openpush_app_id");
         if(!existing.isEmpty()&&!existing.equals(appId))throw new IllegalStateException("OpenPush is already configured for a different APP_ID.");
-        project(c);validateEndpoint(c,value(c,"openpush_server_url"));
+        project(c);
+        if(!CentralTransport.enabled(c))validateEndpoint(c,value(c,"openpush_server_url"));
         if(!appId.equals(prefs(c).getString("appId",""))&&!prefs(c).edit().putString("appId",appId).commit())
             throw new IllegalStateException("OpenPush could not persist APP_ID for background delivery.");
     }

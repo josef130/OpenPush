@@ -80,15 +80,21 @@ web resolution, unique PendingIntent and at-most-once click behavior are unchang
 No real public HTTPS endpoint has been supplied for this installation. We do NOT
 invent a production hostname or ship localhost as a production default. The SDK
 publisher must set openpushDefaultServerUrl or OPENPUSH_SERVER_URL to the actual
-HTTPS origin. Public Maven-local/JitPack publication rejects a missing/non-HTTPS
+HTTPS origin for production. Production publication rejects a missing/non-HTTPS
 origin. Once compiled into the release, consumers need not pass it in Activities.
 Optional existing resource configuration can override it for a self-hosted backend.
 
 USB-only verification builds set -PopenpushDebugServerUrl=http://127.0.0.1:4310,
 use adb reverse tcp:4310 tcp:4310 and a debuggable consumer. DEFAULT_SERVER_URL
 stays empty until the real HTTPS origin is supplied. Release consumers never use
-DEBUG_SERVER_URL; public publication also rejects any configured debug endpoint.
+DEBUG_SERVER_URL; production publication also rejects any configured debug endpoint.
 This verification artifact is not suitable for Google Play production.
+
+The current jitpack.yml deliberately opts into DEVELOPMENT publication with
+openpushDevelopmentPublication=true and the explicit loopback Debug URL. This
+allows both artifacts to be built from one tag for local USB testing, with the
+production URL empty. It does not make release applications production-ready.
+See RELEASE-VERSIONS.md before changing to production publication.
 
 The endpoint is central in the SDK build, not in Activity code. Changing a compiled
 endpoint requires a new SDK and consumer app update. Keeping a stable HTTPS domain

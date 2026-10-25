@@ -20,12 +20,17 @@ public final class ReceiptJobService extends JobService {
     // while the worker is in a network call. Never defer those solely due to a snapshot.
     static boolean drain(Context context, BooleanSupplier active, Uploader uploader) {
         SharedPreferences prefs=context.getSharedPreferences(ReceiptQueue.PREFS,MODE_PRIVATE);
+        java.util.Set<String> attempted=new java.util.HashSet<>();
         for (int processed=0; processed<20 && active.getAsBoolean(); processed++) {
             Map.Entry<String,?> entry=null;
             synchronized(ReceiptQueue.LOCK) {
                 for(Map.Entry<String,?> candidate:prefs.getAll().entrySet())
-                    if(candidate.getKey().startsWith("event:")) { entry=candidate; break; }
-                if(entry==null) return false;
+                    if(candidate.getKey().startsWith("event:") && !attempted.contains(candidate.getKey())) { entry=candidate; break; }
+                if(entry==null) {
+                    for(String key:prefs.getAll().keySet())if(key.startsWith("event:"))return true;
+                    return false;
+                }
+                attempted.add(entry.getKey());
             }
             try {
                 JSONObject body=new JSONObject((String)entry.getValue());
@@ -35,18 +40,19 @@ public final class ReceiptJobService extends JobService {
                     code=uploader.upload(body);
                     ReceiptQueue.uploadStatus(context,"http_"+code);
                 }
-                if(code!=200 && code!=400 && code!=404) return true;
+                if(code!=200 && code!=400 && code!=404) continue;
                 synchronized(ReceiptQueue.LOCK) {
                     // A newer session can replace this key during upload. Keep that version.
                     if(entry.getValue().equals(prefs.getString(entry.getKey(),null))) {
                         SharedPreferences.Editor edit=prefs.edit().remove(entry.getKey());
                         if(code!=200 && "session".equals(body.optString("event"))) edit.remove("lastSession");
                         edit.commit();
-                    }
+                    } else attempted.remove(entry.getKey());
                 }
             } catch(Exception unavailable) {
                 ReceiptQueue.uploadStatus(context,"transport_unavailable");
-                return true;
+                // Retain failed events, but do not let a legacy offline endpoint
+                // block unrelated receipts using the new central transport.
             }
         }
         synchronized(ReceiptQueue.LOCK) {
@@ -59,7 +65,9 @@ public final class ReceiptJobService extends JobService {
         final int current=++generation;
         new Thread(()->{
             boolean retry=drain(this,()->current==generation,body->{
-                String endpoint=getSharedPreferences(ReceiptQueue.PREFS,MODE_PRIVATE).getString("endpoint","");
+                if("firestore".equals(body.optString("transport")))return CentralTransport.client(this).receipt(body);
+                String endpoint=body.optString("uploadEndpoint",getSharedPreferences(ReceiptQueue.PREFS,MODE_PRIVATE).getString("endpoint",""));
+                body.remove("uploadEndpoint");
                 HttpURLConnection connection=(HttpURLConnection)new URL(endpoint).openConnection();
                 try {
                     connection.setInstanceFollowRedirects(false);connection.setConnectTimeout(5000);connection.setReadTimeout(5000);
