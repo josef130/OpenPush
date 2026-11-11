@@ -52,6 +52,14 @@ final class AutoSetup implements Application.ActivityLifecycleCallbacks {
                 builder.deepLink(parts[0],parts[1],parts[2],Class.forName(destination).asSubclass(Activity.class));
             }
             instance=builder.build();instance.automatic=true;owner=c;
+            if(CentralTransport.enabled(c) && !endpoint.isEmpty()) {
+                try {
+                    ClientSettings.validateEndpoint(c,endpoint);
+                    MobileActivityTracker.configure(c,true,base(c)+"/api/events");
+                } catch(IllegalStateException invalid) {
+                    Log.w("OpenPushSetup","ACTIVITY_ENDPOINT_UNAVAILABLE");
+                }
+            }
             instance.createChannel("Notifications");
             if(c instanceof Application)((Application)c).registerActivityLifecycleCallbacks(new AutoSetup());
             int others=0;

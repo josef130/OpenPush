@@ -18,14 +18,18 @@ import java.util.Locale;
 final class MobileActivityTracker implements Application.ActivityLifecycleCallbacks {
     private static MobileActivityTracker instance;
     private final Application app;
-    private MobileActivityTracker(Application app) { this.app=app; }
+    private final String endpoint;
+    private MobileActivityTracker(Application app, String endpoint) { this.app=app; this.endpoint=endpoint; }
     static synchronized void configure(Context context, boolean enabled) {
+        configure(context,enabled,"");
+    }
+    static synchronized void configure(Context context, boolean enabled, String endpoint) {
         if(!(context instanceof Application)) return;
         Application app=(Application)context;
-        if(instance!=null && (instance.app!=app || !enabled)) {
+        if(instance!=null && (instance.app!=app || !enabled || !instance.endpoint.equals(endpoint))) {
             instance.app.unregisterActivityLifecycleCallbacks(instance); instance=null;
         }
-        if(enabled && instance==null) { instance=new MobileActivityTracker(app); app.registerActivityLifecycleCallbacks(instance); }
+        if(enabled && instance==null) { instance=new MobileActivityTracker(app,endpoint); app.registerActivityLifecycleCallbacks(instance); }
     }
     @Override public void onActivityResumed(Activity activity) {
         if(activity instanceof OpenPushClickActivity) return;
@@ -44,7 +48,7 @@ final class MobileActivityTracker implements Application.ActivityLifecycleCallba
                     byte[] digest=MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8));
                     StringBuilder hash=new StringBuilder();
                     for(byte part:digest) hash.append(String.format(Locale.ROOT,"%02x",part & 255));
-                    ReceiptQueue.enqueueSession(app,hash.toString(),occurredAt,notificationsEnabled);
+                    ReceiptQueue.enqueueSession(app,hash.toString(),occurredAt,notificationsEnabled,endpoint);
                 } catch(Exception ignored) { }
             });
         } catch(RuntimeException unavailable) { /* Firebase may not be configured yet. */ }

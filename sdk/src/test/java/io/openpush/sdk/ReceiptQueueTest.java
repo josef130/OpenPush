@@ -26,14 +26,19 @@ public class ReceiptQueueTest {
   assertFalse(c.getSharedPreferences(ReceiptQueue.PREFS,0).contains("event:"+d.get("op_receipt")+":display_failed"));
  }
 
- @Test public void sessionsDeduplicateByUtcDayAndKeepLatestPermissionWithoutRawFcmToken() throws Exception {
+ @Test public void sessionsThrottleRepeatedOpensAndKeepLatestPermissionWithoutRawFcmToken() throws Exception {
   Context c=RuntimeEnvironment.getApplication();android.content.SharedPreferences prefs=c.getSharedPreferences(ReceiptQueue.PREFS,0);prefs.edit().clear().commit();
   long first=java.time.Instant.parse("2026-10-19T12:00:00Z").toEpochMilli();String hash="d".repeat(64);
+  ReceiptQueue.configure(c,"https://example.com/api/events");
   ReceiptQueue.enqueueSession(c,hash,first,true);ReceiptQueue.enqueueSession(c,hash,first+1,true);
   String key="event:session:"+hash+":2026-10-19";
   assertEquals(first,new org.json.JSONObject(prefs.getString(key,"{}")).getLong("occurredAt"));
   ReceiptQueue.enqueueSession(c,hash,first+2,false);
   assertFalse(new org.json.JSONObject(prefs.getString(key,"{}")).getBoolean("notificationsEnabled"));
+  ReceiptQueue.enqueueSession(c,hash,first+60_002,false);
+  org.json.JSONObject updated=new org.json.JSONObject(prefs.getString(key,"{}"));
+  assertEquals(first+60_002,updated.getLong("occurredAt"));
+  assertTrue(updated.has("profile"));
   ReceiptQueue.enqueueSession(c,hash,first+86400000,true);
   assertTrue(prefs.contains("event:session:"+hash+":2026-10-20"));
   assertFalse(prefs.getString(key,"").contains("registrationToken"));

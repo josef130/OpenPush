@@ -67,22 +67,33 @@ final class ReceiptQueue {
         } if (scheduleUpload) schedule(context); } catch(RuntimeException | org.json.JSONException ignored) { /* Analytics never break delivery. */ }
     }
     static void enqueueSession(Context context, String deviceTokenHash, long occurredAt, boolean notificationsEnabled) {
+        enqueueSession(context,deviceTokenHash,occurredAt,notificationsEnabled,"");
+    }
+    static void enqueueSession(Context context, String deviceTokenHash, long occurredAt, boolean notificationsEnabled, String activityEndpoint) {
         if(deviceTokenHash == null || !deviceTokenHash.matches("[a-f0-9]{64}")) return;
         try { synchronized(LOCK) {
             SharedPreferences prefs=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE);
             java.text.SimpleDateFormat format=new java.text.SimpleDateFormat("yyyy-MM-dd",java.util.Locale.US);
             format.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
             String day=format.format(new java.util.Date(occurredAt));
-            String marker=day+":"+notificationsEnabled+":"+deviceTokenHash;
-            if(marker.equals(prefs.getString("lastSession","")) || prefs.getAll().size()>1000) return;
+            String endpoint=activityEndpoint.isEmpty()?prefs.getString("endpoint",""):activityEndpoint;
+            if(endpoint.isEmpty() || CentralTransport.marker().equals(endpoint))return;
+            String timezone=java.util.TimeZone.getDefault().getID();
+            String language=java.util.Locale.getDefault().toLanguageTag();
+            String model=(android.os.Build.MANUFACTURER+" "+android.os.Build.MODEL).trim();
+            String marker=notificationsEnabled+":"+deviceTokenHash+":"+model+":"+timezone+":"+language+":"+endpoint;
+            if(prefs.getAll().size()>1000 || (marker.equals(prefs.getString("lastSession",""))
+                && occurredAt-prefs.getLong("lastSessionAt",0)<60_000)) return;
             String key="event:session:"+deviceTokenHash+":"+day;
             if(prefs.contains(key) && new JSONObject(prefs.getString(key,"{}")).optLong("occurredAt")>occurredAt) return;
             String installationId=prefs.getString("installationId",null);
             if(installationId==null) { installationId=java.util.UUID.randomUUID().toString(); prefs.edit().putString("installationId",installationId).commit(); }
             JSONObject body=new JSONObject().put("event","session").put("installationId",installationId).put("deviceTokenHash",deviceTokenHash)
-                .put("occurredAt",occurredAt).put("notificationsEnabled",notificationsEnabled).put("queuedAt",System.currentTimeMillis());
+                .put("occurredAt",occurredAt).put("notificationsEnabled",notificationsEnabled).put("queuedAt",System.currentTimeMillis())
+                .put("uploadEndpoint",endpoint)
+                .put("profile",new JSONObject().put("model",model).put("timezone",timezone).put("language",language));
             // Replace today's pending state with the latest actual foreground observation.
-            if(!prefs.edit().putString("event:session:"+deviceTokenHash+":"+day,body.toString()).putString("lastSession",marker).commit()) return;
+            if(!prefs.edit().putString(key,body.toString()).putString("lastSession",marker).putLong("lastSessionAt",occurredAt).commit()) return;
         } schedule(context); } catch(RuntimeException | org.json.JSONException ignored) { /* Analytics never affect the host UI. */ }
     }
     static synchronized void schedule(Context context) {
