@@ -52,7 +52,9 @@ final class AutoSetup implements Application.ActivityLifecycleCallbacks {
                 builder.deepLink(parts[0],parts[1],parts[2],Class.forName(destination).asSubclass(Activity.class));
             }
             instance=builder.build();instance.automatic=true;owner=c;
-            if(CentralTransport.enabled(c) && !endpoint.isEmpty()) {
+            if(CentralTransport.enabled(c) && !setting(c,"openpush_activity_database_url").isEmpty()) {
+                MobileActivityTracker.configure(c,true,"firebase-activity");
+            } else if(CentralTransport.enabled(c) && !endpoint.isEmpty()) {
                 try {
                     ClientSettings.validateEndpoint(c,endpoint);
                     MobileActivityTracker.configure(c,true,base(c)+"/api/events");

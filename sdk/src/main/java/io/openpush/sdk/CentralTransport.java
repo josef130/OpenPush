@@ -123,6 +123,20 @@ final class CentralTransport {
             if(reply.status!=200)throw new IOException("CENTRAL_REGISTRATION_HTTP_"+reply.status);
             ClientSettings.prefs(c).edit().putString("centralLastStamp",stamp).commit();
         }
+        int activity(JSONObject body)throws Exception{
+            String origin=ClientSettings.resource(c,"openpush_activity_database_url").replaceAll("/+$","");
+            URI url=new URI(origin);
+            String host=url.getHost();
+            if(!"https".equals(url.getScheme()) || host==null || !host.matches("[a-z0-9-]+(?:\\.[a-z0-9-]+)?\\.firebasedatabase\\.app|[a-z0-9-]+\\.firebaseio\\.com")
+                || url.getRawAuthority()==null || !url.getRawAuthority().equals(host) || !url.getPath().isEmpty()
+                || url.getQuery()!=null || url.getFragment()!=null)return 400;
+            String token=identity();
+            JSONObject activity=new JSONObject().put("occurredAt",body.getLong("occurredAt"))
+                .put("profile",body.getJSONObject("profile")).put("updatedAt",new JSONObject().put(".sv","timestamp"));
+            String path=origin+"/openpushActivity/"+auth.getString("uid")+".json?print=silent&auth=";
+            Reply result=wire.call(path+URLEncoder.encode(token,"UTF-8"),"PUT",activity.toString(),"","application/json");
+            return result.status==204?200:result.status;
+        }
         int receipt(JSONObject body)throws Exception{
             String message=body.optString("messageId"),event=body.optString("event");
             if(!ClientSettings.validId(message))return 400;

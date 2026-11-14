@@ -83,7 +83,7 @@ final class ReceiptQueue {
             String model=(android.os.Build.MANUFACTURER+" "+android.os.Build.MODEL).trim();
             String marker=notificationsEnabled+":"+deviceTokenHash+":"+model+":"+timezone+":"+language+":"+endpoint;
             if(prefs.getAll().size()>1000 || (marker.equals(prefs.getString("lastSession",""))
-                && occurredAt-prefs.getLong("lastSessionAt",0)<60_000)) return;
+                && occurredAt-prefs.getLong("lastSessionAt",0)<("firebase-activity".equals(endpoint)?900_000:60_000))) return;
             String key="event:session:"+deviceTokenHash+":"+day;
             if(prefs.contains(key) && new JSONObject(prefs.getString(key,"{}")).optLong("occurredAt")>occurredAt) return;
             String installationId=prefs.getString("installationId",null);

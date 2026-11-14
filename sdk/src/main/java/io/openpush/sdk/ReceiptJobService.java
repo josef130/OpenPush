@@ -68,6 +68,7 @@ public final class ReceiptJobService extends JobService {
                 if("firestore".equals(body.optString("transport")))return CentralTransport.client(this).receipt(body);
                 String endpoint=body.optString("uploadEndpoint",getSharedPreferences(ReceiptQueue.PREFS,MODE_PRIVATE).getString("endpoint",""));
                 body.remove("uploadEndpoint");
+                if("firebase-activity".equals(endpoint))return CentralTransport.client(this).activity(body);
                 HttpURLConnection connection=(HttpURLConnection)new URL(endpoint).openConnection();
                 try {
                     connection.setInstanceFollowRedirects(false);connection.setConnectTimeout(5000);connection.setReadTimeout(5000);
