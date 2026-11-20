@@ -70,4 +70,32 @@ public class CentralTransportTest {
         assertEquals("https://old.example/api/events",body.getString("uploadEndpoint"));
         assertFalse(body.has("transport"));
     }
+
+    @Test public void automaticModeDoesNotNeedManualPackageButLegacyModeStillDoes() throws Exception {
+        JSONObject profile=new JSONObject().put("packageName",new JSONObject().put("stringValue","com.old.host"));
+        assertFalse(CentralTransport.Client.acceptsPackage(profile,c.getPackageName()));
+        profile.put("registrationMode",new JSONObject().put("stringValue","project-challenge-v1"));
+        assertTrue(CentralTransport.Client.acceptsPackage(profile,c.getPackageName()));
+        profile.put("registrationMode",new JSONObject().put("stringValue","unknown"));
+        assertFalse(CentralTransport.Client.acceptsPackage(profile,c.getPackageName()));
+    }
+
+    @Test public void automaticRegistrationUsesHostPackageAndRejectsWrongFirebaseProject() throws Exception {
+        for(String project:Arrays.asList("host-project","wrong-project")){
+            CentralTransport.authFile(c).delete();ClientSettings.prefs(c).edit().remove("centralLastStamp").commit();
+            List<String> commits=new ArrayList<>();
+            CentralTransport.Client client=new CentralTransport.Client(c,(url,method,body,bearer,type)->{
+                if(url.contains("accounts:signUp"))return new CentralTransport.Reply(200,new JSONObject()
+                    .put("localId","autoUid").put("idToken","test-id").put("refreshToken","test-refresh").put("expiresIn","3600"));
+                if(method.equals("GET"))return new CentralTransport.Reply(200,new JSONObject().put("fields",new JSONObject()
+                    .put("projectId",new JSONObject().put("stringValue",project))
+                    .put("registrationMode",new JSONObject().put("stringValue","project-challenge-v1"))));
+                JSONObject fields=new JSONObject(body).getJSONArray("writes").getJSONObject(0).getJSONObject("update").getJSONObject("fields");
+                assertEquals(c.getPackageName(),fields.getJSONObject("packageName").getString("stringValue"));
+                commits.add(url);return new CentralTransport.Reply(200,new JSONObject());
+            },CentralTransport.marker(),"public-test-key");
+            if(project.equals("host-project")){client.register("host-fcm-token",true);assertEquals(1,commits.size());}
+            else {try{client.register("host-fcm-token",true);fail("Wrong project accepted");}catch(java.io.IOException expected){}assertEquals(0,commits.size());}
+        }
+    }
 }

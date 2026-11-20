@@ -101,13 +101,19 @@ final class CentralTransport {
         private JSONObject string(String v)throws Exception{return new JSONObject().put("stringValue",v);}
         private JSONObject time(String field)throws Exception{return new JSONObject().put("fieldPath",field).put("setToServerValue","REQUEST_TIME");}
         private Reply commit(JSONObject write)throws Exception{return call(":commit","POST",new JSONObject().put("writes",new JSONArray().put(write)));}
+        static boolean acceptsPackage(JSONObject config,String packageName) {
+            JSONObject mode=config.optJSONObject("registrationMode");
+            if(mode!=null && "project-challenge-v1".equals(mode.optString("stringValue")))return true;
+            JSONObject bound=config.optJSONObject("packageName");
+            return bound!=null && packageName.equals(bound.optString("stringValue"));
+        }
         void register(String token,boolean enabled)throws Exception{
             identity();String uid=auth.getString("uid");
             Reply profile=call("/openpushApps/"+appId(),"GET",null);
             if(profile.status!=200)throw new IOException("CENTRAL_PROFILE_HTTP_"+profile.status);
             JSONObject config=profile.json.getJSONObject("fields");
             if(!ClientSettings.project(c).equals(config.getJSONObject("projectId").getString("stringValue"))
-                || !c.getPackageName().equals(config.getJSONObject("packageName").getString("stringValue")))throw new IOException("Central application configuration mismatch");
+                || !acceptsPackage(config,c.getPackageName()))throw new IOException("Central application configuration mismatch");
             long opened=ClientSettings.prefs(c).getLong("lastForegroundAt",0);
             String day=new java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US){{setTimeZone(TimeZone.getTimeZone("UTC"));}}.format(new Date(opened));
             String proof=ClientSettings.prefs(c).getString("centralProof","");
